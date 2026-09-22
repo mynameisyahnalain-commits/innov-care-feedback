@@ -1,0 +1,9 @@
+{
+  "name": "Avis Maison de Santé Innov Care",
+  "short_name": "Innov Care",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f7f2",
+  "theme_color": "#174f50",
+  "icons": [{ "src": "/logocare.jpg", "sizes": "192x192", "type": "image/jpeg" }]
+}

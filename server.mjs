@@ -13,12 +13,20 @@ const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD || 'innov-super-2026
 const scrypt = promisify(scryptCallback);
 const pool = mysql.createPool({
   host: process.env.DB_HOST || '127.0.0.1',
+  port: Number(process.env.DB_PORT || 3306),
   user: process.env.DB_USERNAME || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_DATABASE || 'code',
+  database: process.env.DB_DATABASE || 'defaultdb',
+
   waitForConnections: true,
   connectionLimit: 5,
-  ...(process.env.DB_SSL === 'true' ? { ssl: { rejectUnauthorized: true } } : {}),
+
+  ssl:
+    process.env.DB_SSL === 'true'
+      ? {
+          rejectUnauthorized: false,
+        }
+      : undefined,
 });
 
 app.use(cors());
@@ -45,8 +53,21 @@ app.get('/api/network-ip', (_req, res) => {
 
 // ─── Santé ──────────────────────────────────────────────────────────────────
 app.get('/api/health', async (_req, res) => {
-  try { await pool.query('SELECT 1'); res.json({ ok: true, database: 'code' }); }
-  catch { res.status(503).json({ ok: false, message: 'Base de données indisponible.' }); }
+  try {
+    await pool.query('SELECT 1');
+
+    res.json({
+      ok: true,
+      database: process.env.DB_DATABASE || 'defaultdb',
+    });
+  } catch (error) {
+    console.error('Erreur connexion MySQL Aiven:', error);
+
+    res.status(503).json({
+      ok: false,
+      message: 'Base de données indisponible.',
+    });
+  }
 });
 
 // ─── Soumission d'un avis patient ───────────────────────────────────────────

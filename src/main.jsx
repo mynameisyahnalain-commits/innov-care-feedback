@@ -1,36 +1,225 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 
-const logo = '/logocare.jpg';
-const configuredPublicUrl = import.meta.env.VITE_PUBLIC_URL || '';
-const isPlaceholderUrl = configuredPublicUrl.includes('votre-nom.vercel.app') || configuredPublicUrl.includes('127.0.0.1') || configuredPublicUrl.includes('192.168.');
-const publicUrl = isPlaceholderUrl || !configuredPublicUrl ? window.location.origin : configuredPublicUrl.replace(/\/$/, '');
+const LOGO_SRC = '/logo.png';
 const apiBase = import.meta.env.VITE_API_BASE_URL || '';
-const encodeCredentials = (username, password) => btoa(JSON.stringify({ username, password })).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
 
-function Brand() { return <div className="brand"><img src={logo} alt="Maison de Santé Innov Care" /><div><strong>Maison de Santé</strong><span>Innov Care</span></div></div>; }
+const encodeCredentials = (username, password) =>
+  btoa(JSON.stringify({ username, password }))
+    .replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
 
-function InstallButton() {
-  const [installEvent, setInstallEvent] = useState(null);
-  const [help, setHelp] = useState(false);
-  useEffect(() => { const onInstall = event => { event.preventDefault(); setInstallEvent(event); }; window.addEventListener('beforeinstallprompt', onInstall); return () => window.removeEventListener('beforeinstallprompt', onInstall); }, []);
-  async function install() { if (installEvent) { await installEvent.prompt(); setInstallEvent(null); return; } setHelp(!help); }
-  return <div className="install-area"><button className="secondary-button" onClick={install}>Ajouter l’application</button>{help && <p className="install-help">iPhone : touchez <strong>Partager</strong> dans Safari, puis <strong>Sur l’écran d’accueil</strong>. Android : ouvrez le menu ⋮ puis <strong>Installer l’application</strong>.</p>}</div>;
+const ALL_SERVICES = [
+  'Accueil & Réception',
+  'Consultation médicale',
+  'Soins & Infirmerie',
+  'Laboratoire / Analyses',
+  'Radiologie / Échographie',
+  'Pharmacie',
+  'Urgences',
+  'Maternité / Gynécologie',
+  'Pédiatrie',
+  'Chirurgie / Bloc',
+  'Hospitalisation',
+  'Caisse & Facturation',
+  'Autre service',
+];
+
+function Brand() {
+  return (
+    <div className="brand">
+      <img className="brand-logo-full" src={LOGO_SRC} alt="Maison de Santé Innov Care" />
+    </div>
+  );
 }
 
+// ─── Sélecteur de services sous forme de Modal Pop-Up au centre ──────────────
+function ServiceSelector({ selectedServices, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  function toggle(srv) {
+    if (selectedServices.includes(srv)) {
+      onChange(selectedServices.filter((s) => s !== srv));
+    } else {
+      onChange([...selectedServices, srv]);
+    }
+  }
+
+  function remove(srv, e) {
+    e.stopPropagation();
+    onChange(selectedServices.filter((s) => s !== srv));
+  }
+
+  return (
+    <div className="service-selector-container">
+      {/* Zone de déclenchement sur le formulaire */}
+      <div
+        className="service-selector-trigger"
+        onClick={() => setIsOpen(true)}
+      >
+        {selectedServices.length === 0 ? (
+          <span className="placeholder-text">👉 Appuyez ici pour choisir vos services...</span>
+        ) : (
+          <div className="selected-tags-inline">
+            {selectedServices.map((srv) => (
+              <span key={srv} className="selected-tag-item">
+                {srv}
+                <button
+                  type="button"
+                  className="tag-remove-btn"
+                  onClick={(e) => remove(srv, e)}
+                  title="Retirer ce service"
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <span className="dropdown-arrow">🔍 Sélectionner</span>
+      </div>
+
+      {/* POP-UP MODAL AU CENTRE DE LA PAGE */}
+      {isOpen && (
+        <div className="service-modal-overlay anim-fade">
+          <div className="service-modal-card">
+            <div className="service-modal-header">
+              <h2>Choix des services médicalisés</h2>
+              <button
+                type="button"
+                className="service-modal-close-btn"
+                onClick={() => setIsOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="service-modal-tip">
+              Cochez tous les services par lesquels vous êtes passé(e) :
+            </p>
+
+            <div className="service-modal-list">
+              {ALL_SERVICES.map((srv) => {
+                const isChecked = selectedServices.includes(srv);
+                return (
+                  <div
+                    key={srv}
+                    className={`service-modal-item ${isChecked ? 'checked' : ''}`}
+                    onClick={() => toggle(srv)}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => {}}
+                      className="service-modal-checkbox"
+                    />
+                    <span className="service-modal-label">{srv}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="service-modal-footer">
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => setIsOpen(false)}
+              >
+                ✓ Valider la sélection ({selectedServices.length})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Étoiles d'évaluation (vide par défaut, se remplit uniquement au clic) ────
+function StarRatingInput({ value, onChange }) {
+  const [hover, setHover] = useState(0);
+  const labels = {
+    1: '1/5 — Très insatisfait',
+    2: '2/5 — Insatisfait',
+    3: '3/5 — Passable / Moyen',
+    4: '4/5 — Satisfait',
+    5: '5/5 — Très satisfait',
+  };
+
+  const activeRating = hover || value;
+
+  return (
+    <div className="star-rating-input-container">
+      <div className="stars-row">
+        {[1, 2, 3, 4, 5].map((star) => {
+          const isFilled = star <= activeRating;
+          return (
+            <button
+              key={star}
+              type="button"
+              className={`star-btn ${isFilled ? 'active' : ''}`}
+              onClick={() => onChange(star)}
+              onMouseEnter={() => setHover(star)}
+              onMouseLeave={() => setHover(0)}
+              aria-label={`Noter ${star} sur 5`}
+            >
+              ★
+            </button>
+          );
+        })}
+      </div>
+      <div className="rating-text-hint">
+        {activeRating > 0 ? (
+          labels[activeRating]
+        ) : (
+          <span className="rating-not-set">Cliquez sur les étoiles pour noter</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StarDisplay({ rating }) {
+  return (
+    <div className="star-display">
+      {[1, 2, 3, 4, 5].map((v) => (
+        <span key={v} className={v <= rating ? 'star-gold' : 'star-muted'}>★</span>
+      ))}
+      <span className="star-numeric">{rating}/5</span>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PATIENT — Formulaire unique, propre et direct
+// ═══════════════════════════════════════════════════════════════════════════════
 function FeedbackView() {
-  const services = ['Accueil', 'Consultation', 'Soins', 'Pharmacie', 'Laboratoire', 'Autre'];
-  const [form, setForm] = useState({ services: [], rating: 0, message: '' });
-  const [state, setState] = useState({ sent: false, sentMessage: '', error: '', saving: false });
+  const [services, setServices] = useState([]);
+  const [rating, setRating] = useState(0); // Vide par défaut
+  const [message, setMessage] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
+
+  // Synchronisation hors-ligne
   useEffect(() => {
     const syncPending = async () => {
       const pending = JSON.parse(localStorage.getItem('innov_pending_feedbacks') || '[]');
       if (!pending.length || !navigator.onLine) return;
       const remaining = [];
-      for (const feedback of pending) {
-        try { const response = await fetch(`${apiBase}/api/feedbacks`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(feedback) }); if (!response.ok) remaining.push(feedback); } catch { remaining.push(feedback); }
+      for (const fb of pending) {
+        try {
+          const r = await fetch(`${apiBase}/api/feedbacks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(fb),
+          });
+          if (!r.ok) remaining.push(fb);
+        } catch {
+          remaining.push(fb);
+        }
       }
       localStorage.setItem('innov_pending_feedbacks', JSON.stringify(remaining));
     };
@@ -38,177 +227,661 @@ function FeedbackView() {
     window.addEventListener('online', syncPending);
     return () => window.removeEventListener('online', syncPending);
   }, []);
-  async function submit(event) {
-    event.preventDefault();
-    if (form.message.trim().length < 10) return setState({ ...state, error: 'Votre message doit contenir au moins 10 caractères.' });
-    if (!form.services.length) return setState({ ...state, error: 'Veuillez sélectionner au moins un service.' });
-    if (!form.rating) return setState({ ...state, error: 'Veuillez sélectionner une note.' });
-    setState({ sent: false, sentMessage: '', error: '', saving: true });
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (services.length === 0) {
+      setError('Veuillez choisir au moins un service concerné par votre passage.');
+      return;
+    }
+    if (rating === 0) {
+      setError('Veuillez sélectionner une note avec les étoiles.');
+      return;
+    }
+    if (!message.trim() || message.trim().length < 3) {
+      setError('Veuillez écrire votre message ou remarque.');
+      return;
+    }
+
+    setError('');
+    setSaving(true);
+
+    const payload = {
+      services,
+      rating,
+      message: message.trim(),
+      contact_email: contactEmail.trim() || null,
+    };
+
     try {
       if (!navigator.onLine) throw new Error('offline');
-      const response = await fetch(`${apiBase}/api/feedbacks`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Enregistrement impossible.');
-      setState({ sent: true, sentMessage: 'Votre message a bien été transmis à notre équipe.', error: '', saving: false });
-    } catch (error) {
-      if (error.message === 'offline' || !navigator.onLine) {
+      const res = await fetch(`${apiBase}/api/feedbacks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Impossible d\'enregistrer votre avis.');
+      setSent(true);
+    } catch (err) {
+      if (err.message === 'offline' || !navigator.onLine) {
         const pending = JSON.parse(localStorage.getItem('innov_pending_feedbacks') || '[]');
-        localStorage.setItem('innov_pending_feedbacks', JSON.stringify([...pending, form]));
-        setState({ sent: true, sentMessage: 'Votre avis est enregistré sur ce téléphone. Il sera envoyé automatiquement dès que la connexion reviendra.', error: '', saving: false });
-      } else setState({ sent: false, sentMessage: '', error: error.message || 'La connexion au service est impossible.', saving: false });
+        localStorage.setItem('innov_pending_feedbacks', JSON.stringify([...pending, payload]));
+        setSent(true);
+      } else {
+        setError(err.message || 'Une erreur est survenue lors de l\'envoi.');
+      }
+    } finally {
+      setSaving(false);
     }
   }
-  if (state.sent) return <main className="patient-page"><Brand /><InstallButton /><section className="card success-card"><div className="success-mark">✓</div><p className="eyebrow">Avis enregistré</p><h1>Merci pour votre avis.</h1><p>{state.sentMessage}</p><button className="primary-button" onClick={() => window.location.reload()}>Donner un autre avis</button></section></main>;
-  return <main className="patient-page"><Brand /><InstallButton /><section className="card patient-card"><p className="eyebrow">Maison de Santé Innov Care</p><h1>Comment s’est passée votre visite ?</h1><p className="muted">Sélectionnez tous les services concernés, puis partagez vos remarques en un seul envoi.</p>{state.error && <div className="error">{state.error}</div>}<form onSubmit={submit}><fieldset className="service-options"><legend>Services concernés</legend><p className="field-hint">Vous pouvez en choisir plusieurs.</p><div className="service-grid">{services.map(service => <label className="service-option" key={service}><input type="checkbox" checked={form.services.includes(service)} onChange={event => setForm({ ...form, services: event.target.checked ? [...form.services, service] : form.services.filter(item => item !== service) })} /><span>{service}</span></label>)}</div></fieldset><fieldset><legend>Votre note globale</legend><div className="stars">{[1, 2, 3, 4, 5].map(value => <button type="button" className={value <= form.rating ? 'star active' : 'star'} onClick={() => setForm({ ...form, rating: value })} aria-label={`${value} sur 5`} key={value}>★</button>)}</div></fieldset><label>Votre avis et vos remarques<textarea value={form.message} onChange={event => setForm({ ...form, message: event.target.value })} placeholder="Écrivez vos remarques sur les services sélectionnés..." required /></label><button className="primary-button" type="submit" disabled={state.saving}>{state.saving ? 'Envoi en cours...' : 'Envoyer mon avis'}</button></form><p className="privacy">Aucun nom ni aucune donnée médicale ne vous est demandé.</p></section></main>;
+
+  if (sent) {
+    return (
+      <main className="patient-container anim-fade">
+        <Brand />
+        <section className="card patient-card success-box">
+          <div className="success-icon">✓</div>
+          <h2>Merci pour votre message !</h2>
+          <p className="success-desc">
+            Votre avis a bien été transmis à la <strong>Maison de Santé Innov Care</strong>.
+            Votre retour nous aide à perfectionner notre prise en charge.
+          </p>
+          <button
+            className="btn-primary"
+            onClick={() => {
+              setSent(false);
+              setServices([]);
+              setRating(0);
+              setMessage('');
+              setContactEmail('');
+            }}
+          >
+            Donner un autre avis
+          </button>
+        </section>
+      </main>
+    );
+  }
+
+  return (
+    <main className="patient-container anim-fade">
+      <header className="patient-header">
+        <Brand />
+        <h1 className="patient-main-title">Votre avis compte pour nous</h1>
+        <p className="patient-sub-title">
+          Partagez votre expérience en toute simplicité et confidentialité.
+        </p>
+      </header>
+
+      <form className="card patient-card" onSubmit={handleSubmit}>
+        {error && <div className="error-alert">{error}</div>}
+
+        {/* 1. Sélection dynamique des services */}
+        <div className="form-group">
+          <label className="form-label">
+            1. Service(s) concerné(s)
+            <span className="form-hint">Ouvrez la liste pour cocher vos services</span>
+          </label>
+          <ServiceSelector
+            selectedServices={services}
+            onChange={setServices}
+          />
+        </div>
+
+        {/* 2. Évaluation avec étoiles (vides par défaut) */}
+        <div className="form-group">
+          <label className="form-label">
+            2. Votre appréciation globale
+          </label>
+          <StarRatingInput value={rating} onChange={setRating} />
+        </div>
+
+        {/* 3. Message */}
+        <div className="form-group">
+          <label className="form-label" htmlFor="patient-message">
+            3. Vos remarques et commentaires
+          </label>
+          <textarea
+            id="patient-message"
+            className="form-textarea"
+            placeholder="Exprimez-vous librement sur l'accueil, les soins, la prise en charge, etc."
+            rows={4}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            required
+          />
+        </div>
+
+        {/* 4. Contact optionnel */}
+        <div className="form-group">
+          <label className="form-label" htmlFor="patient-contact">
+            4. Numéro de téléphone ou e-mail <span className="tag-optional">(Optionnel)</span>
+          </label>
+          <input
+            id="patient-contact"
+            type="text"
+            className="form-input"
+            placeholder="Laissez votre contact si vous désirez une réponse"
+            value={contactEmail}
+            onChange={(e) => setContactEmail(e.target.value)}
+          />
+        </div>
+
+        <button type="submit" className="btn-primary btn-submit" disabled={saving}>
+          {saving ? 'Envoi en cours...' : 'Envoyer mon avis'}
+        </button>
+      </form>
+    </main>
+  );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN — Rôle : REGARDER UNIQUEMENT les messages qui viennent (Lecture seule)
+// ═══════════════════════════════════════════════════════════════════════════════
 function AdminView() {
-  const [username, setUsername] = useState(''); const [password, setPassword] = useState(''); const [token, setToken] = useState(localStorage.getItem('innov_admin') || ''); const [feedbacks, setFeedbacks] = useState([]); const [error, setError] = useState(''); const [showQr, setShowQr] = useState(false); const [showPassword, setShowPassword] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [token, setToken] = useState(localStorage.getItem('innov_admin') || '');
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [qrUrlInput, setQrUrlInput] = useState('http://192.168.1.7:5173');
+
+  // Détection automatique de l'adresse réseau
+  useEffect(() => {
+    fetch(`${apiBase}/api/network-ip`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.url) setQrUrlInput(data.url);
+      })
+      .catch(() => { });
+  }, []);
+
+  async function apiFetch(path, options = {}, tok = token) {
+    let r;
+    try {
+      r = await fetch(`${apiBase}${path}`, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${tok}`,
+          ...(options.headers || {}),
+        },
+      });
+    } catch {
+      throw new Error('Connexion au serveur impossible.');
+    }
+    if (r.status === 401) throw new Error('Mot de passe ou identifiant incorrect.');
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      throw new Error(d.message || 'Erreur serveur.');
+    }
+    return r.json();
+  }
+
+  async function loadFeedbacks(tok = token) {
+    try {
+      const data = await apiFetch('/api/admin/feedbacks', {}, tok);
+      setFeedbacks(data);
+      setError('');
+    } catch (err) {
+      setError(err.message);
+      if (err.message.includes('incorrect') || err.message.includes('requis')) {
+        setToken('');
+        localStorage.removeItem('innov_admin');
+      }
+    }
+  }
 
   useEffect(() => {
-    const homeMode = localStorage.getItem('innov_home_app_mode');
-    if (homeMode === 'admin') {
-      localStorage.setItem('innov_admin', token || '');
+    if (token) {
+      loadFeedbacks();
     }
   }, [token]);
 
-  async function load(currentToken = token) { let response; try { response = await fetch(`${apiBase}/api/admin/feedbacks`, { headers: { Authorization: `Bearer ${currentToken}` } }); } catch { throw new Error('Impossible de joindre le serveur. Vérifiez la connexion Internet.'); } if (response.status === 401) throw new Error('Mot de passe administrateur incorrect.'); if (!response.ok) throw new Error('Le serveur admin est indisponible.'); setFeedbacks(await response.json()); }
-  useEffect(() => { if (token) load().catch(error => { setError(error.message); setToken(''); localStorage.removeItem('innov_admin'); localStorage.setItem('innov_home_app_mode', 'patient'); }); }, []);
-  async function login(event) { event.preventDefault(); const credentials = encodeCredentials(username.trim().toLowerCase() || 'admin', password); try { await load(credentials); localStorage.setItem('innov_admin', credentials); localStorage.setItem('innov_home_app_mode', 'admin'); setToken(credentials); setError(''); } catch (loginError) { setError(loginError.message); } }
-  function downloadCsv() { const header = 'Date;Service;Note;Message'; const lines = feedbacks.map(item => [new Date(item.created_at).toLocaleString('fr-FR'), item.service || 'Non précisé', item.rating, item.message].map(value => `"${String(value).replaceAll('"', '""')}"`).join(';')); const blob = new Blob([`\ufeff${header}\n${lines.join('\n')}`], { type: 'text/csv;charset=utf-8' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'avis-patients-innov-care.csv'; link.click(); URL.revokeObjectURL(link.href); }
-  if (!token) return <main className="admin-page"><header className="admin-header"><Brand /><InstallButton /></header><form className="admin-login card" onSubmit={login}><p className="eyebrow">Espace responsable</p><h1>Lire les avis des patients.</h1><p className="muted">Accédez aux messages transmis depuis le formulaire.</p>{error && <div className="error">{error}</div>}<label>Identifiant<input value={username} onChange={event => setUsername(event.target.value)} required autoComplete="username" /></label><label>Mot de passe<div className="password-field"><input type={showPassword ? 'text' : 'password'} value={password} onChange={event => setPassword(event.target.value)} required autoComplete="current-password" /><button type="button" className="password-toggle" onClick={() => setShowPassword(!showPassword)}>{showPassword ? 'Masquer' : 'Afficher'}</button></div></label><button className="primary-button" type="submit">Voir les avis</button></form></main>;
-  return <main className="admin-page"><header className="admin-header"><Brand /><div className="admin-actions"><button className="secondary-button" onClick={() => load()}>Actualiser</button><button className="secondary-button" onClick={() => setShowQr(!showQr)}>{showQr ? 'Masquer le QR' : 'Afficher le QR'}</button><button className="primary-button compact-button" onClick={downloadCsv}>Télécharger les avis</button><button className="secondary-button" onClick={() => { localStorage.removeItem('innov_admin'); setToken(''); }}>Quitter</button></div></header>{showQr && <section className="qr-print card"><p className="eyebrow">Affiche d’accueil</p><h2>Scannez pour donner votre avis</h2><QRCodeCanvas value={`${publicUrl}/`} size={300} level="H" includeMargin /><p className="qr-address">{publicUrl}/</p><button className="primary-button compact-button" onClick={() => window.print()}>Imprimer le QR code</button></section>}<div className="admin-heading"><div><p className="eyebrow">Espace responsable</p><h1>Avis et remarques.</h1></div><span className="count">{feedbacks.length} avis</span></div><section className="feedback-list">{feedbacks.length === 0 ? <div className="empty card">Aucun avis reçu pour le moment.</div> : feedbacks.map(feedback => <article className="feedback-item card" key={feedback.id}><div className="feedback-meta"><span>{feedback.service || 'Service non précisé'}</span><time>{new Date(feedback.created_at).toLocaleString('fr-FR')}</time></div><div className="rating">{'★'.repeat(feedback.rating)}<span>{'★'.repeat(5 - feedback.rating)}</span></div><p>{feedback.message}</p></article>)}</section></main>;
+  async function handleLogin(e) {
+    e.preventDefault();
+    const creds = encodeCredentials(username.trim().toLowerCase() || 'admin', password);
+    try {
+      await loadFeedbacks(creds);
+      localStorage.setItem('innov_admin', creds);
+      setToken(creds);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  const filteredFeedbacks = feedbacks.filter((f) => {
+    if (!searchTerm.trim()) return true;
+    const q = searchTerm.toLowerCase();
+    return (
+      (f.message && f.message.toLowerCase().includes(q)) ||
+      (f.service && f.service.toLowerCase().includes(q)) ||
+      (f.contact_email && f.contact_email.toLowerCase().includes(q))
+    );
+  });
+
+  if (!token) {
+    return (
+      <main className="admin-container anim-fade">
+        <header className="patient-header">
+          <Brand />
+        </header>
+        <div className="login-box card">
+          <h2>Espace Administrateur</h2>
+          <p className="login-desc">Accédez à la consultation des messages des patients</p>
+          {error && <div className="error-alert">{error}</div>}
+          <form onSubmit={handleLogin}>
+            <div className="form-group">
+              <label className="form-label">Identifiant</label>
+              <input
+                type="text"
+                className="form-input"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="admin"
+                required
+                autoFocus
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Mot de passe</label>
+              <input
+                type="password"
+                className="form-input"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <button type="submit" className="btn-primary" style={{ marginTop: 12 }}>
+              Consulter les messages
+            </button>
+          </form>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="admin-container anim-fade">
+      {/* En-tête Admin */}
+      <header className="admin-simple-header">
+        <Brand />
+        <div className="admin-top-actions">
+          <button className="btn-secondary" onClick={() => setShowQrModal(!showQrModal)}>
+            {showQrModal ? 'Masquer QR Code' : '📲 QR Code à scanner'}
+          </button>
+          <button
+            className="btn-logout"
+            onClick={() => {
+              localStorage.removeItem('innov_admin');
+              setToken('');
+            }}
+          >
+            Déconnexion
+          </button>
+        </div>
+      </header>
+
+      {/* Panneau QR Code */}
+      {showQrModal && (
+        <section className="card qr-print-card anim-fade">
+          <h2>QR Code pour les patients</h2>
+          <p className="qr-sub-desc">
+            Placez ce QR code à l'accueil ou en salle d'attente pour que les patients puissent donner leur avis.
+          </p>
+          <div className="qr-wrapper">
+            <QRCodeCanvas value={qrUrlInput} size={220} level="H" includeMargin />
+          </div>
+          <div className="qr-url-edit-box">
+            <label>Lien encodé dans le QR Code :</label>
+            <input
+              type="text"
+              className="form-input"
+              value={qrUrlInput}
+              onChange={(e) => setQrUrlInput(e.target.value)}
+            />
+          </div>
+          <button className="btn-primary" style={{ marginTop: 16 }} onClick={() => window.print()}>
+            🖨 Imprimer l'affiche QR Code
+          </button>
+        </section>
+      )}
+
+      {/* Titre & Recherche */}
+      <div className="messages-heading">
+        <div>
+          <h1 className="admin-title">Messages des patients</h1>
+          <p className="admin-subtitle">Consultez les remarques et retours d'expérience reçus</p>
+        </div>
+        <div className="badge-count-total">{feedbacks.length} avis reçu(s)</div>
+      </div>
+
+      <div className="search-bar-wrap">
+        <input
+          type="text"
+          className="form-input search-input"
+          placeholder="🔍 Rechercher par mot-clé, service ou contact..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+
+      {error && <div className="error-alert">{error}</div>}
+
+      {/* Bannières / Cartes de messages élégantes */}
+      <div className="feedbacks-list">
+        {filteredFeedbacks.length === 0 ? (
+          <div className="card empty-card">
+            {searchTerm ? 'Aucun message ne correspond à votre recherche.' : 'Aucun message reçu pour le moment.'}
+          </div>
+        ) : (
+          filteredFeedbacks.map((item) => (
+            <article key={item.id} className="card modern-message-banner">
+              {/* Bannière d'en-tête du message */}
+              <div className="banner-top-bar">
+                <div className="banner-service-tags">
+                  {item.service
+                    ? item.service.split(', ').map((s) => (
+                      <span key={s} className="service-banner-chip">{s}</span>
+                    ))
+                    : <span className="service-banner-chip">Général</span>}
+                </div>
+                <div className="banner-date-badge">
+                  {new Date(item.created_at).toLocaleString('fr-FR', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  })}
+                </div>
+              </div>
+
+              {/* Étoiles d'évaluation */}
+              <div className="banner-rating-row">
+                <StarDisplay rating={item.rating} />
+              </div>
+
+              {/* Corps du message patient */}
+              <div className="banner-message-body">
+                <span className="quote-icon">“</span>
+                <p className="banner-text">{item.message}</p>
+                <span className="quote-icon-end">”</span>
+              </div>
+
+              {/* Coordonnées si fournies */}
+              {item.contact_email && (
+                <div className="banner-contact-badge">
+                  ✉ <strong>Contact laissé :</strong> {item.contact_email}
+                </div>
+              )}
+            </article>
+          ))
+        )}
+      </div>
+    </main>
+  );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// SUPER ADMIN — Rôle : GESTION COMPLÈTE & SUPPRESSION DES MESSAGES
+// ═══════════════════════════════════════════════════════════════════════════════
 function SuperAdminView() {
   const [password, setPassword] = useState('');
   const [token, setToken] = useState(localStorage.getItem('innov_super_admin') || '');
   const [feedbacks, setFeedbacks] = useState([]);
-  const [overview, setOverview] = useState(null);
-  const [error, setError] = useState('');
-  const [saving, setSaving] = useState(null);
-
-  async function request(path, options = {}, currentToken = token) {
-    let response;
-    try { response = await fetch(`${apiBase}${path}`, { ...options, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentToken}`, ...(options.headers || {}) } }); }
-    catch { throw new Error('Impossible de joindre le serveur. Vérifiez la connexion Internet.'); }
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.message || 'Opération impossible.');
-    return data;
-  }
-
-  async function load(currentToken = token) {
-    const [systemData, feedbackData] = await Promise.all([
-      request('/api/super-admin/overview', {}, currentToken),
-      request('/api/super-admin/feedbacks', {}, currentToken),
-    ]);
-    setOverview(systemData);
-    setFeedbacks(feedbackData);
-  }
-
-  useEffect(() => { if (token) load().catch(loginError => { setError(loginError.message); setToken(''); localStorage.removeItem('innov_super_admin'); }); }, []);
-
-  async function login(event) {
-    event.preventDefault();
-    try { await load(password); localStorage.setItem('innov_super_admin', password); setToken(password); setError(''); }
-    catch (loginError) { setError(loginError.message); }
-  }
-
-  async function updateFeedback(feedback) {
-    setSaving(feedback.id);
-    try {
-      await request(`/api/super-admin/feedbacks/${feedback.id}`, { method: 'PATCH', body: JSON.stringify(feedback) });
-      await load();
-      setError('');
-    } catch (saveError) { setError(saveError.message); }
-    finally { setSaving(null); }
-  }
-
-  async function deleteFeedback(id) {
-    if (!window.confirm('Supprimer définitivement cet avis ?')) return;
-    setSaving(id);
-    try { await request(`/api/super-admin/feedbacks/${id}`, { method: 'DELETE' }); await load(); setError(''); }
-    catch (deleteError) { setError(deleteError.message); }
-    finally { setSaving(null); }
-  }
-
-  if (!token) return <main className="admin-page"><header className="admin-header"><Brand /></header><form className="admin-login card" onSubmit={login}><p className="eyebrow">Contrôle du système</p><h1>Super administrateur.</h1><p className="muted">Gérez les données et les informations globales de l’application.</p>{error && <div className="error">{error}</div>}<label>Mot de passe super administrateur<input type="password" value={password} onChange={event => setPassword(event.target.value)} required autoComplete="current-password" /></label><button className="primary-button" type="submit">Ouvrir le système</button></form></main>;
-
-  return <main className="admin-page super-admin-page"><header className="admin-header"><Brand /><div className="admin-actions"><button className="secondary-button" onClick={() => load().catch(loadError => setError(loadError.message))}>Actualiser</button><button className="secondary-button" onClick={() => { localStorage.removeItem('innov_super_admin'); setToken(''); }}>Quitter</button></div></header><div className="admin-heading"><div><p className="eyebrow">Contrôle du système</p><h1>Super administrateur.</h1></div><span className="count">Accès complet</span></div>{error && <div className="error">{error}</div>}<section className="system-stats"><div className="card stat-card"><span>Base de données</span><strong>{overview?.database || '...'}</strong></div><div className="card stat-card"><span>Total des avis</span><strong>{overview?.total ?? '...'}</strong></div><div className="card stat-card"><span>Note moyenne</span><strong>{overview?.average ?? '-'} / 5</strong></div></section><section className="super-feedback-list"><div className="section-title"><h2>Toutes les données</h2><span>{feedbacks.length} enregistrement(s)</span></div>{feedbacks.length === 0 ? <div className="empty card">Aucun avis enregistré.</div> : feedbacks.map(feedback => <article className="super-feedback-item card" key={feedback.id}><div className="feedback-meta"><span>Avis #{feedback.id}</span><time>{new Date(feedback.created_at).toLocaleString('fr-FR')}</time></div><div className="super-fields"><label>Service<input value={feedback.service || ''} onChange={event => setFeedbacks(items => items.map(item => item.id === feedback.id ? { ...item, service: event.target.value } : item))} /></label><label>Note<select value={feedback.rating} onChange={event => setFeedbacks(items => items.map(item => item.id === feedback.id ? { ...item, rating: Number(event.target.value) } : item))}><option value="1">1 / 5</option><option value="2">2 / 5</option><option value="3">3 / 5</option><option value="4">4 / 5</option><option value="5">5 / 5</option></select></label><label>Statut<select value={feedback.status} onChange={event => setFeedbacks(items => items.map(item => item.id === feedback.id ? { ...item, status: event.target.value } : item))}><option value="new">Nouveau</option><option value="in_review">En cours</option><option value="resolved">Traité</option></select></label></div><label>Message<textarea value={feedback.message} onChange={event => setFeedbacks(items => items.map(item => item.id === feedback.id ? { ...item, message: event.target.value } : item))} /></label><div className="super-item-actions"><button className="primary-button compact-button" disabled={saving === feedback.id} onClick={() => updateFeedback(feedback)}>{saving === feedback.id ? 'Enregistrement...' : 'Enregistrer les modifications'}</button><button className="danger-button" disabled={saving === feedback.id} onClick={() => deleteFeedback(feedback.id)}>Supprimer</button></div></article>)}</section></main>;
-}
-
-function SuperAdminReadOnlyView() {
-  const [password, setPassword] = useState('');
-  const [token, setToken] = useState(localStorage.getItem('innov_super_admin') || '');
-  const [feedbacks, setFeedbacks] = useState([]);
   const [users, setUsers] = useState([]);
-  const [overview, setOverview] = useState(null);
   const [newUser, setNewUser] = useState({ username: '', displayName: '', password: '' });
   const [error, setError] = useState('');
+  const [deletingId, setDeletingId] = useState(null);
 
-  async function request(path, options = {}, currentToken = token) {
-    let response;
-    try { response = await fetch(`${apiBase}${path}`, { ...options, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentToken}`, ...(options.headers || {}) } }); }
-    catch { throw new Error('Impossible de joindre le serveur. Vérifiez la connexion Internet.'); }
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.message || 'Opération impossible.');
+  async function req(path, options = {}, tok = token) {
+    let r;
+    try {
+      r = await fetch(`${apiBase}${path}`, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${tok}`,
+          ...(options.headers || {}),
+        },
+      });
+    } catch {
+      throw new Error('Connexion au serveur impossible.');
+    }
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.message || 'Opération impossible.');
     return data;
   }
 
-  async function load(currentToken = token) {
-    const [systemData, feedbackData, userData] = await Promise.all([
-      request('/api/super-admin/overview', {}, currentToken),
-      request('/api/super-admin/feedbacks', {}, currentToken),
-      request('/api/super-admin/users', {}, currentToken),
+  async function load(tok = token) {
+    const [fb, us] = await Promise.all([
+      req('/api/super-admin/feedbacks', {}, tok),
+      req('/api/super-admin/users', {}, tok),
     ]);
-    setOverview(systemData); setFeedbacks(feedbackData); setUsers(userData);
+    setFeedbacks(fb);
+    setUsers(us);
   }
 
-  useEffect(() => { if (token) load().catch(loadError => { setError(loadError.message); setToken(''); localStorage.removeItem('innov_super_admin'); }); }, []);
+  useEffect(() => {
+    if (token) {
+      load().catch((err) => {
+        setError(err.message);
+        setToken('');
+        localStorage.removeItem('innov_super_admin');
+      });
+    }
+  }, []);
 
-  async function login(event) {
-    event.preventDefault();
-    try { await load(password); localStorage.setItem('innov_super_admin', password); setToken(password); setError(''); }
-    catch (loginError) { setError(loginError.message); }
+  async function login(e) {
+    e.preventDefault();
+    try {
+      await load(password);
+      localStorage.setItem('innov_super_admin', password);
+      setToken(password);
+      setError('');
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
-  async function createUser(event) {
-    event.preventDefault();
-    try { await request('/api/super-admin/users', { method: 'POST', body: JSON.stringify(newUser) }); setNewUser({ username: '', displayName: '', password: '' }); await load(); setError(''); }
-    catch (createError) { setError(createError.message); }
+  async function handleDeleteFeedback(id) {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer définitivement cet avis ?')) return;
+    setDeletingId(id);
+    try {
+      await req(`/api/super-admin/feedbacks/${id}`, { method: 'DELETE' });
+      setFeedbacks((prev) => prev.filter((f) => f.id !== id));
+      setError('');
+    } catch (err) {
+      setError(err.message || 'Erreur lors de la suppression.');
+    } finally {
+      setDeletingId(null);
+    }
   }
 
-  async function changePassword(user) {
-    const nextPassword = window.prompt(`Nouveau mot de passe pour ${user.username} (10 caractères minimum) :`);
-    if (nextPassword === null) return;
-    try { await request(`/api/super-admin/users/${user.id}/password`, { method: 'PATCH', body: JSON.stringify({ password: nextPassword }) }); setError(''); }
-    catch (passwordError) { setError(passwordError.message); }
+  async function createUser(e) {
+    e.preventDefault();
+    try {
+      await req('/api/super-admin/users', { method: 'POST', body: JSON.stringify(newUser) });
+      setNewUser({ username: '', displayName: '', password: '' });
+      await load();
+      setError('');
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
-  async function deleteUser(user) {
-    if (!window.confirm(`Supprimer le compte ${user.username} ?`)) return;
-    try { await request(`/api/super-admin/users/${user.id}`, { method: 'DELETE' }); await load(); setError(''); }
-    catch (deleteError) { setError(deleteError.message); }
+  async function deleteUser(id) {
+    if (!window.confirm('Supprimer ce compte administrateur ?')) return;
+    try {
+      await req(`/api/super-admin/users/${id}`, { method: 'DELETE' });
+      await load();
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
-  if (!token) return <main className="admin-page"><header className="admin-header"><Brand /></header><form className="admin-login card" onSubmit={login}><p className="eyebrow">Contrôle du système</p><h1>Super administrateur.</h1><p className="muted">Consultez le système et gérez les comptes responsables.</p>{error && <div className="error">{error}</div>}<label>Mot de passe super administrateur<input type="password" value={password} onChange={event => setPassword(event.target.value)} required autoComplete="current-password" /></label><button className="primary-button" type="submit">Ouvrir le système</button></form></main>;
+  if (!token) {
+    return (
+      <main className="admin-container anim-fade">
+        <header className="patient-header"><Brand /></header>
+        <div className="login-box card">
+          <h2>Super Administrateur</h2>
+          <p className="login-desc">Gestion avancée & suppression des messages</p>
+          {error && <div className="error-alert">{error}</div>}
+          <form onSubmit={login}>
+            <div className="form-group">
+              <label className="form-label">Mot de passe Super Admin</label>
+              <input
+                type="password"
+                className="form-input"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <button type="submit" className="btn-primary" style={{ marginTop: 12 }}>
+              Ouvrir l'espace Super Admin
+            </button>
+          </form>
+        </div>
+      </main>
+    );
+  }
 
-  return <main className="admin-page super-admin-page"><header className="admin-header"><Brand /><div className="admin-actions"><button className="secondary-button" onClick={() => load().catch(loadError => setError(loadError.message))}>Actualiser</button><button className="secondary-button" onClick={() => { localStorage.removeItem('innov_super_admin'); setToken(''); }}>Quitter</button></div></header><div className="admin-heading"><div><p className="eyebrow">Contrôle du système</p><h1>Super administrateur.</h1></div><span className="count">Lecture des avis</span></div>{error && <div className="error">{error}</div>}<section className="system-stats"><div className="card stat-card"><span>Base de données</span><strong>{overview?.database || '...'}</strong></div><div className="card stat-card"><span>Total des avis</span><strong>{overview?.total ?? '...'}</strong></div><div className="card stat-card"><span>Note moyenne</span><strong>{overview?.average ?? '-'} / 5</strong></div></section><section className="account-panel card"><div className="section-title"><h2>Comptes responsables</h2><span>{users.length} compte(s)</span></div><form className="account-form" onSubmit={createUser}><input placeholder="Identifiant" value={newUser.username} onChange={event => setNewUser({ ...newUser, username: event.target.value })} required /><input placeholder="Nom du responsable" value={newUser.displayName} onChange={event => setNewUser({ ...newUser, displayName: event.target.value })} required /><input type="password" placeholder="Mot de passe (10 caractères min.)" value={newUser.password} onChange={event => setNewUser({ ...newUser, password: event.target.value })} required minLength="10" /><button className="primary-button compact-button" type="submit">Créer le compte</button></form><div className="user-list">{users.map(user => <div className="user-row" key={user.id}><div><strong>{user.display_name}</strong><span>{user.username}</span></div><div className="user-actions"><button className="secondary-button" onClick={() => changePassword(user)}>Modifier le mot de passe</button><button className="danger-button" onClick={() => deleteUser(user)}>Supprimer</button></div></div>)}</div></section><section className="super-feedback-list"><div className="section-title"><h2>Avis patients</h2><span>{feedbacks.length} enregistrement(s), lecture seule</span></div>{feedbacks.length === 0 ? <div className="empty card">Aucun avis enregistré.</div> : feedbacks.map(feedback => <article className="feedback-item card" key={feedback.id}><div className="feedback-meta"><span>{feedback.service || 'Service non précisé'} · {feedback.status}</span><time>{new Date(feedback.created_at).toLocaleString('fr-FR')}</time></div><div className="rating">{'★'.repeat(feedback.rating)}<span>{'★'.repeat(5 - feedback.rating)}</span></div><p>{feedback.message}</p></article>)}</section></main>;
+  return (
+    <main className="admin-container anim-fade">
+      <header className="admin-simple-header">
+        <Brand />
+        <button
+          className="btn-logout"
+          onClick={() => {
+            localStorage.removeItem('innov_super_admin');
+            setToken('');
+          }}
+        >
+          Déconnexion Super Admin
+        </button>
+      </header>
+
+      <div className="messages-heading">
+        <div>
+          <h1 className="admin-title">Gestion Super Admin</h1>
+          <p className="admin-subtitle">Vous pouvez supprimer des avis et créer des comptes d'accès</p>
+        </div>
+        <div className="badge-count-total">{feedbacks.length} avis au total</div>
+      </div>
+
+      {error && <div className="error-alert">{error}</div>}
+
+      {/* Gestion des comptes admin */}
+      <div className="card" style={{ marginBottom: 30 }}>
+        <h3 style={{ color: 'var(--primary-teal)', marginBottom: 12 }}>Créer un compte d'accès responsable</h3>
+        <form onSubmit={createUser} className="user-create-form">
+          <input
+            className="form-input"
+            placeholder="Identifiant (ex: reception)"
+            value={newUser.username}
+            onChange={(e) => setNewUser((u) => ({ ...u, username: e.target.value }))}
+            required
+          />
+          <input
+            className="form-input"
+            placeholder="Nom complet"
+            value={newUser.displayName}
+            onChange={(e) => setNewUser((u) => ({ ...u, displayName: e.target.value }))}
+            required
+          />
+          <input
+            className="form-input"
+            type="password"
+            placeholder="Mot de passe (10 car. min)"
+            value={newUser.password}
+            onChange={(e) => setNewUser((u) => ({ ...u, password: e.target.value }))}
+            required
+          />
+          <button type="submit" className="btn-primary" style={{ width: 'auto' }}>
+            + Ajouter
+          </button>
+        </form>
+
+        <div style={{ marginTop: 16 }}>
+          {users.map((u) => (
+            <div key={u.id} className="user-item-row">
+              <div>
+                <strong>{u.display_name}</strong> <small>({u.username})</small>
+              </div>
+              <button
+                className="btn-delete-msg"
+                onClick={() => deleteUser(u.id)}
+              >
+                Supprimer le compte
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Liste des avis avec bouton SUPPRIMER fonctionnel */}
+      <h2 style={{ fontSize: 20, color: 'var(--primary-teal)', marginBottom: 16 }}>
+        Tous les avis reçus ({feedbacks.length})
+      </h2>
+      <div className="feedbacks-list">
+        {feedbacks.map((item) => (
+          <article key={item.id} className="card modern-message-banner">
+            <div className="banner-top-bar">
+              <div className="banner-service-tags">
+                {item.service
+                  ? item.service.split(', ').map((s) => (
+                    <span key={s} className="service-banner-chip">{s}</span>
+                  ))
+                  : <span className="service-banner-chip">Général</span>}
+              </div>
+              <div className="banner-date-badge">
+                {new Date(item.created_at).toLocaleString('fr-FR')}
+              </div>
+            </div>
+
+            <div className="banner-rating-row">
+              <StarDisplay rating={item.rating} />
+            </div>
+
+            <div className="banner-message-body">
+              <p className="banner-text">{item.message}</p>
+            </div>
+
+            {item.contact_email && (
+              <div className="banner-contact-badge">
+                ✉ <strong>Contact :</strong> {item.contact_email}
+              </div>
+            )}
+
+            <div className="banner-footer-actions">
+              <button
+                type="button"
+                className="btn-delete-action"
+                disabled={deletingId === item.id}
+                onClick={() => handleDeleteFeedback(item.id)}
+              >
+                {deletingId === item.id ? 'Suppression...' : '🗑 Supprimer définitivement cet avis'}
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+    </main>
+  );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// ROUTER
+// ═══════════════════════════════════════════════════════════════════════════════
 function App() {
-  const isAdminPath = window.location.pathname === '/admin';
-  const isSuperAdminPath = window.location.pathname === '/super-admin';
-  const savedMode = localStorage.getItem('innov_home_app_mode');
-  const hasAdminSession = localStorage.getItem('innov_admin');
-  const shouldOpenAdmin = isAdminPath || savedMode === 'admin' || (hasAdminSession && window.matchMedia('(display-mode: standalone)').matches);
-  if (isSuperAdminPath) return <SuperAdminReadOnlyView />;
-  return shouldOpenAdmin ? <AdminView /> : <FeedbackView />;
-}
-
-if (window.location.pathname === '/admin') {
-  localStorage.setItem('innov_home_app_mode', 'admin');
+  const path = window.location.pathname;
+  if (path === '/super-admin') return <SuperAdminView />;
+  if (path === '/admin') return <AdminView />;
+  return <FeedbackView />;
 }
 
 createRoot(document.getElementById('root')).render(<App />);
-if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));

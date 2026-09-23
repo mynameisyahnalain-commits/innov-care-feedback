@@ -1,76 +1,51 @@
-# Mise en ligne gratuite
+# 🚀 Guide d'Hébergement Gratuit & Rapide
 
-## Architecture
+Ce guide vous explique comment héberger gratuitement et en quelques minutes l'application **Maison de Santé Innov Care** pour que n'importe quel patient puisse scanner le QR Code depuis son smartphone, n'importe où dans le monde.
 
-- Frontend React/Vite : Vercel.
-- API Node/Express : Render.
-- Base MySQL compatible : TiDB Cloud Serverless.
+---
 
-Le niveau gratuit de Render peut mettre l'API en veille après une période sans trafic. Le premier chargement peut donc prendre quelques secondes. Une disponibilité garantie nécessite un hébergement payant.
+## 🌟 Option 1 : Hébergement Gratuit sur Render.com (Recommandé - 5 minutes)
 
-## 1. Créer la base en ligne
+[Render.com](https://render.com) permet d'héberger le frontend et l'API Node.js gratuitement avec une adresse HTTPS sécurisée (ex: `https://innov-care.onrender.com`).
 
-1. Créer un compte TiDB Cloud.
-2. Créer un cluster Serverless gratuit.
-3. Ouvrir le SQL Editor.
-4. Coller le contenu de `database/schema.sql`.
-5. Conserver les paramètres MySQL fournis : hôte, utilisateur, mot de passe, port et base `code`.
+### Étapes :
+1. **Créez un compte gratuit sur GitHub** et déposez votre projet sur un dépôt (*repository*).
+2. Connectez-vous sur [Render.com](https://dashboard.render.com).
+3. Cliquez sur **New +** → **Web Service**.
+4. Sélectionnez votre dépôt GitHub `Qr.Code`.
+5. Remplissez les paramètres suivants :
+   * **Name** : `innov-care-feedback`
+   * **Environment** : `Node`
+   * **Build Command** : `npm install && npm run build`
+   * **Start Command** : `node server.mjs`
+6. Dans la section **Environment Variables** (Variables d'environnement), ajoutez :
+   * `NODE_ENV` = `production`
+   * `ADMIN_PASSWORD` = `innov-care-2026`
+   * `SUPER_ADMIN_PASSWORD` = `innov-super-2026`
+   * `DB_HOST` = *(adresse de votre base MySQL hébergée)*
+   * `DB_USERNAME` = *(nom d'utilisateur)*
+   * `DB_PASSWORD` = *(mot de passe)*
+   * `DB_DATABASE` = *(nom de la base)*
+7. Cliquez sur **Create Web Service**. 
 
-## 2. Publier l'API sur Render
+🎉 Votre site sera en ligne avec son lien HTTPS sécurisé !
 
-1. Pousser ce dossier sur un dépôt GitHub privé ou public.
-2. Sur Render, choisir **New > Web Service**, puis sélectionner le dépôt.
-3. Paramètres :
-   - Runtime : `Node`
-   - Build command : `npm install`
-   - Start command : `npm run api`
-   - Instance : `Free`
-4. Ajouter ces variables d'environnement Render :
+---
 
-```text
-DB_HOST=<hote-tidb>
-DB_USERNAME=<utilisateur-tidb>
-DB_PASSWORD=<mot-de-passe-tidb>
-DB_DATABASE=code
-DB_SSL=true
-ADMIN_PASSWORD=<mot-de-passe-admin-long-et-unique>
-```
+## 🗄️ Base de données MySQL Gratuite
 
-5. Ajouter le certificat ou les options SSL demandées par le fournisseur MySQL si nécessaire.
-6. Tester l'URL Render : `https://<nom-api>.onrender.com/api/health` doit répondre avec `ok: true`.
+Pour la base de données MySQL en ligne :
+* **[Aiven.io](https://aiven.io)** (Offre gratuite MySQL 1 Go - très rapide et sans carte de crédit).
+* **[Railway.app](https://railway.app)** (Offre gratuite avec MySQL).
 
-## 3. Publier le f
-   - Framework : `Vite`
-   - Build command : `npm run build`
-   - Output directory : `dist`
-3. Ajouter ces variables d'environnement Vercel :
+Une fois la base créée sur Aiven ou Railway, exécutez-y simplement le fichier `database/schema.sql` pour créer les tables.
 
-```text
-VITE_API_BASE_URL=https://<nom-api>.onrender.com
-VITE_PUBLIC_URL=https://<nom-frontend>.vercel.app
-```
+---
 
-4. Déployer.
-5. Régénérer le QR depuis `/admin` après le déploiement. Il doit afficher l'URL Vercel, jamais `127.0.0.1` ni `192.168.x.x`.
+## 📲 Scanner le QR Code une fois Hébergé
 
-## 4. Livrer l'accès au responsable
-
-- Transmettre au responsable uniquement l'URL `/admin` et le mot de passe défini dans `ADMIN_PASSWORD`.
-## Deploiement
-
-Le deploiement recommande est Netlify avec Netlify Functions et TiDB Cloud. Il evite la mise en veille de Render et utilise le meme domaine pour le formulaire patient et le dashboard admin.
-
-Suivre [NETLIFY.md](NETLIFY.md) pour les variables d'environnement, la base de donnees et les tests de livraison.
-## 5. Vérification avant livraison
-
-1. Scanner le QR avec un téléphone qui n'est pas connecté au Wi-Fi du PC.
-2. Envoyer un avis test.
-3. Ouvrir `/admin` sur le téléphone du responsable.
-4. Vérifier que l'avis apparaît.
-5. Télécharger le CSV.
-6. Tester le formulaire déjà ouvert en mode avion : il conserve l'avis et le transmet au retour de la connexion.
-7. Remplacer le mot de passe de démonstration par une valeur longue et privée.
-
-## Limite du hors connexion
-
-Un QR ne peut pas ouvrir un site qui n'a jamais été chargé sans aucun réseau. Le téléphone doit avoir ouvert la fiche au moins une fois, ou l'établissement doit fournir un Wi-Fi local. Après le premier chargement, la PWA peut conserver la fiche et mettre les avis en attente jusqu'au retour d'Internet.
+Une fois le site hébergé sur internet (ex: `https://innov-care-feedback.onrender.com`) :
+1. Rendez-vous sur votre espace d'administration `/admin`.
+2. Cliquez sur **📲 QR Code à scanner**.
+3. Le QR Code encodera directement votre adresse internet HTTPS officielle.
+4. **Scannez-le depuis n'importe quel smartphone** : le formulaire s'ouvrira immédiatement, sans aucun réglage Wi-Fi ni blocage de pare-feu !

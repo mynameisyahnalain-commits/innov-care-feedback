@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: innov-care-feedback
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: node server.mjs
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ADMIN_PASSWORD
+        value: innov-care-2026
+      - key: SUPER_ADMIN_PASSWORD
+        value: innov-super-2026

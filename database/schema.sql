@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS `feedbacks` (
   `rating` TINYINT UNSIGNED NULL,
   `service` VARCHAR(250) NULL,
   `status` ENUM('new', 'in_review', 'resolved') NOT NULL DEFAULT 'new',
+  `admin_note` TEXT NULL,
+  `contact_email` VARCHAR(200) NULL,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),

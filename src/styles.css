@@ -1410,3 +1410,39 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
   color: var(--primary-teal);
   font-weight: 600;
 }
+
+/* Repères visuels et relief des actions patient */
+.feedback-option { border-width: 2px; border-bottom-width: 4px; padding: 20px 16px; border-radius: 14px; box-shadow: 0 4px 10px #143c2910; }
+.feedback-option.option-services, .feedback-option.option-services.is-selected { background: #0d5950; border-color: #083e38; color: white; box-shadow: 0 4px 0 #083e38; }
+.option-services small, .option-services .option-action { color: #e2f2e9; }
+.option-services .option-icon { color: white; background: #ffffff24; }
+.feedback-option.option-complaint, .feedback-option.option-complaint.is-selected { background: #fff2d9; border-color: #be8a37; box-shadow: 0 4px 0 #be8a37; }
+.option-complaint .option-action { color: #805116; }
+.feedback-option:hover:not(:disabled) { filter: brightness(1.05); transform: translateY(-2px); }
+.feedback-option:active:not(:disabled) { transform: translateY(3px); box-shadow: none; }
+.option-action { margin-top: 16px; font-size: 14px; }
+.option-icon { width: 40px; height: 40px; }
+.msm-header { background: #edf5f0; padding-top: 40px; }
+.msm-service-grid { padding: 20px; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.msm-service-tile { background: #fff; border: 1px solid #c6d6cf; border-bottom: 4px solid #b3c9be; padding: 16px 10px 12px; gap: 10px; box-shadow: 0 3px 8px #133c2710; }
+.msm-service-tile:hover { background: #f2f8f4; border-color: #377862; transform: translateY(-2px); }
+.msm-service-tile:active { transform: translateY(2px); box-shadow: none; }
+.msm-service-tile.rated { background: #e8f4ec; border-color: #398061; }
+.msm-tile-label { font-size: 14px; min-height: 36px; display: flex; align-items: center; justify-content: center; }
+.service-symbol { display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 16px; background: #d9eee4; color: #185c48; flex-shrink: 0; }
+.service-symbol svg { width: 30px; height: 30px; }
+.service-symbol-consultation, .service-symbol-radiologie { background: #e0edf9; color: #285e92; }
+.service-symbol-soins, .service-symbol-maternite { background: #f7e5ed; color: #994362; }
+.service-symbol-urgences { background: #fce3df; color: #b13b30; }
+.service-symbol-pediatrie, .service-symbol-caisse { background: #fff0d0; color: #956012; }
+.service-symbol-hospit { background: #eae5f7; color: #695096; }
+.service-symbol-autre { background: #e9edef; color: #52616a; }
+.msm-rate-header .service-symbol { margin-bottom: 12px; }
+.service-tile-action { font-size: 12px; font-weight: 600; color: #27644d; margin-top: auto; }
+.msm-footer { background: #f6f9f7; position: sticky; bottom: 0; }
+.btn-primary, .btn-submit-final { border-bottom: 3px solid #073c34; box-shadow: 0 3px 0 #073c3420; }
+.btn-primary:active:not(:disabled), .btn-submit-final:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
+@media (max-width: 520px) {
+  .msm-service-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 16px; gap: 12px; }
+  .msm-header { padding-top: 54px; }
+}

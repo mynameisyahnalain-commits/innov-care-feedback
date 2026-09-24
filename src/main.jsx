@@ -24,6 +24,25 @@ const ALL_SERVICES = [
   { id: 'autre',         label: 'Autre service' },
 ];
 
+const SERVICE_SYMBOLS = {
+  accueil: <><circle cx="12" cy="6" r="3" /><path d="M6 15v-2a6 6 0 0 1 12 0v2M3 15h18v6H3zM8 18h8" /></>,
+  consultation: <><path d="M5 3v5a5 5 0 0 0 10 0V3M3 3h4M13 3h4M10 13v3a5 5 0 0 0 10 0v-2" /><circle cx="20" cy="11" r="2" /></>,
+  soins: <><path d="m15 3 6 6M17 5l-3 3M19 7l-3 3M12 6l6 6-8 8H4v-6zM4 20l-2 2M9 11l3 3M7 14l2 2" /></>,
+  radiologie: <><rect x="3" y="3" width="18" height="14" rx="2" /><path d="M8 21h8M12 17v4M6 10h3l2-4 3 8 2-4h2" /></>,
+  urgences: <><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" /></>,
+  maternite: <><circle cx="10" cy="4" r="2" /><path d="M8 8c-2 2-2 5-1 8l-2 5h12l-2-5c5-2 4-7-1-7l-2-2M9 12l5 2M9 21v-3" /></>,
+  pediatrie: <><circle cx="12" cy="12" r="9" /><path d="M12 3c-3 1-3 4 0 4M8 10h.01M16 10h.01M8 15c2 3 6 3 8 0" /></>,
+  hospit: <><path d="M3 5v16M21 12v9M3 17h18M3 10h5v7M8 11h10a3 3 0 0 1 3 3v3" /><circle cx="6" cy="8" r="2" /></>,
+  caisse: <><path d="M6 2h12v20l-3-2-3 2-3-2-3 2zM9 6h6M9 10h6M9 14h2M14 14h1" /></>,
+  autre: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 17.5h7M17.5 14v7" /></>,
+};
+
+function ServiceIcon({ id }) {
+  return <span className={`service-symbol service-symbol-${id}`} aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{SERVICE_SYMBOLS[id]}</svg>
+  </span>;
+}
+
 function Brand() {
   return (
     <div className="brand">
@@ -201,6 +220,7 @@ function MultiServiceModal({ onClose, onConfirm, initialFeedbacks }) {
                 {ratedIds.length} service{ratedIds.length > 1 ? 's' : ''} noté{ratedIds.length > 1 ? 's' : ''}
               </div>
             )}
+            <ServiceIcon id={activeSrv.id} />
             <h2 className="msm-rate-title">{activeSrv.label}</h2>
             <p className="msm-rate-sub">Comment évaluez-vous ce service ?</p>
           </div>
@@ -271,16 +291,19 @@ function MultiServiceModal({ onClose, onConfirm, initialFeedbacks }) {
                 key={srv.id}
                 type="button"
                 className={`msm-service-tile ${isDone ? 'rated' : ''}`}
+                aria-label={`${srv.label} — ${isDone ? `note ${fb.rating} sur 5, modifier` : 'évaluer ce service'}`}
                 onClick={() => openRating(srv.id)}
               >
+                <ServiceIcon id={srv.id} />
                 <span className="msm-tile-label">{srv.label}</span>
                 {isDone ? (
                   <span className="msm-tile-rated-stars">
                     {[1,2,3,4,5].map(v => (
-                      <span key={v} style={{ color: v <= fb.rating ? '#F5A623' : 'rgba(255,255,255,0.4)', fontSize: 11 }}>★</span>
+                      <span key={v} style={{ color: v <= fb.rating ? '#976315' : '#bccbc5', fontSize: 14 }}>★</span>
                     ))}
                   </span>
                 ) : null}
+                <span className="service-tile-action">{isDone ? 'Modifier ma note' : 'Noter'} <span aria-hidden="true">→</span></span>
               </button>
             );
           })}
@@ -460,7 +483,7 @@ function FeedbackView() {
             <button type="button" className={`feedback-option option-complaint ${mode === 'complaint' ? 'is-selected' : ''}`}
               aria-pressed={mode === 'complaint'} onClick={() => { setMode('complaint'); setError(''); }}>
               <span className="option-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 15a3 3 0 0 1-3 3H9l-5 3V6a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3Z" /><path d="M8 8h8M8 12h5" /></svg></span>
-              <span><strong>Faire une réclamation</strong><small>Écrivez librement, sans choisir de service.</small></span>
+              <span><strong>Faire une réclamation</strong><small>Écrivez librement, sans choisir de service.</small><span className="option-action">Écrire mon message <span aria-hidden="true">→</span></span></span>
             </button>
           </div>
         </fieldset>

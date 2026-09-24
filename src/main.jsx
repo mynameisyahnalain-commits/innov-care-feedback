@@ -599,6 +599,7 @@ function FeedbackView() {
 // ═══════════════════════════════════════════════════════════════════════════════
 function AdminView() {
   const [selectedService, setSelectedService] = useState('');
+  const reviewsRef = useRef(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [token, setToken] = useState(localStorage.getItem('innov_admin') || '');
@@ -673,7 +674,9 @@ function AdminView() {
   // Keep general and legacy combined feedback accessible without inventing separate ratings.
   serviceSummaries.push(...receivedSummaries.filter(s => !ALL_SERVICES.some(service => service.label === s.service)));
   const filteredFeedbacks = feedbacks.filter((f) => {
-    if (selectedService && !feedbackServices(f).includes(selectedService)) return false;
+    const visibleServices = feedbackServices(f);
+    if (!visibleServices.length) return false;
+    if (selectedService && !visibleServices.includes(selectedService)) return false;
     if (!searchTerm.trim()) return true;
     const q = searchTerm.toLowerCase();
     return (
@@ -682,6 +685,24 @@ function AdminView() {
       (f.contact_email && f.contact_email.toLowerCase().includes(q))
     );
   });
+
+  function showServiceReviews(service) {
+    setSelectedService(service);
+    setSearchTerm('');
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      reviewsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      reviewsRef.current?.focus({ preventScroll: true });
+    }));
+  }
+
+  function showAllReviews() {
+    setSelectedService('');
+    setSearchTerm('');
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      reviewsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      reviewsRef.current?.focus({ preventScroll: true });
+    }));
+  }
 
   if (!token) {
     return (
@@ -759,7 +780,7 @@ function AdminView() {
           <div className="overview-heading">
             <div><h2 id="service-overview-title">Les services en un regard</h2>
               <p>Moyennes sur les notes reçues. Cliquez sur un service pour lire ses remarques.</p></div>
-            <button type="button" className="btn-secondary" onClick={() => { setSelectedService(''); setSearchTerm(''); }}>Tous les avis</button>
+            <button type="button" className="btn-secondary" onClick={showAllReviews}>Tous les avis</button>
           </div>
           <div className="service-overview-list">
             {serviceSummaries.map(summary => {
@@ -767,7 +788,7 @@ function AdminView() {
               return <button type="button" key={summary.service}
                 className={`service-overview-row ${selectedService === summary.service ? 'selected' : ''}`}
                 aria-pressed={selectedService === summary.service}
-                onClick={() => { setSelectedService(summary.service); setSearchTerm(''); }}>
+                onClick={() => showServiceReviews(summary.service)}>
                 <ServiceIcon id={service?.id || 'autre'} />
                 <span className="overview-service"><strong>{summary.service}</strong>
                   <small>{summary.count} avis · {summary.comments} remarque{summary.comments > 1 ? 's' : ''}</small></span>
@@ -776,15 +797,18 @@ function AdminView() {
                   {summary.average != null && <span className="score-track" aria-hidden="true"><span style={{ width: `${summary.average * 20}%` }} /></span>}
                   <small>{summary.rated ? `${summary.rated} note${summary.rated > 1 ? 's' : ''}` : 'Pas encore noté'}</small>
                 </span>
-                <span className="overview-arrow" aria-hidden="true">→</span>
+                <span className="overview-link" aria-hidden="true">Voir les avis <span>›</span></span>
               </button>;
             })}
           </div>
-          <p className="overview-footnote">Les avis sans note sont exclus des moyennes. Un ancien avis associé à plusieurs services compte dans chacun d’eux.</p>
+          <p className="overview-footnote">Les moyennes sont calculées uniquement à partir des avis notés.</p>
         </section>
       )}
 
-      <div className="review-list-heading"><h2>{selectedService || 'Tous les avis'}</h2><span>{filteredFeedbacks.length} résultat{filteredFeedbacks.length > 1 ? 's' : ''}</span></div>
+      <div ref={reviewsRef} tabIndex={-1} className="review-list-heading">
+        <div><span className="section-kicker">Avis patients</span><h2>{selectedService || 'Tous les avis'}</h2></div>
+        <span>{filteredFeedbacks.length} résultat{filteredFeedbacks.length > 1 ? 's' : ''}</span>
+      </div>
       <div className="search-bar-wrap">
         <input type="text" className="form-input search-input"
           placeholder=" Rechercher par mot-clé, service ou contact..."

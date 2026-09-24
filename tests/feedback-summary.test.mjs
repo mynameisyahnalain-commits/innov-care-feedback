@@ -38,4 +38,6 @@ test('retired services are excluded without dropping other services on historica
     { service: 'Pharmacie', rating: 2 },
   ]);
   assert.deepEqual(groups.map(g => [g.service, g.average]), [['Accueil & Réception', 5], ['Soins & Infirmerie', 4]]);
+  assert.deepEqual(feedbackServices({ service: 'Pharmacie' }), []);
+  assert.deepEqual(feedbackServices({ service: 'Laboratoire / Analyses' }), []);
 });

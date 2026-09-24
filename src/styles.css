@@ -1565,6 +1565,92 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 @media (max-width: 1000px) {
   .service-overview-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+/* Finition du tableau de bord : métriques lisibles et navigation directe. */
+.service-overview-list .service-overview-row {
+  min-height: 166px;
+  overflow: hidden;
+  border-color: #d7dfdb;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(20, 49, 42, 0.04);
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.service-overview-list .service-overview-row::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: #dce5e0;
+}
+.service-overview-list .service-overview-row.selected::before,
+.service-overview-list .service-overview-row:focus-visible::before { background: var(--primary-teal); }
+.service-overview-list .service-overview-row.selected {
+  background: #f7faf8;
+  border-color: #9ab6a9;
+  box-shadow: 0 1px 3px rgba(20, 49, 42, 0.08);
+}
+.service-overview-list .service-symbol {
+  background: transparent;
+  border: 1px solid currentColor;
+  opacity: .88;
+}
+.service-overview-list .overview-service small { color: #6b7d77; }
+.service-overview-list .overview-score strong {
+  color: #173e35;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+.service-overview-list .score-track { background: #e9eeeb; }
+.service-overview-list .score-track > span { background: #bd8430; }
+.overview-link {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 3px -16px -16px;
+  padding: 10px 16px;
+  border-top: 1px solid #edf1ef;
+  color: #315f51;
+  font-size: 12px;
+  font-weight: 600;
+}
+.overview-link > span { font-size: 19px; line-height: 1; }
+.review-list-heading {
+  scroll-margin-top: 18px;
+  padding-top: 6px;
+  outline: none;
+}
+.review-list-heading:focus-visible { outline: 2px solid #b77c27; outline-offset: 5px; }
+.section-kicker {
+  display: block;
+  margin-bottom: 3px;
+  color: #8a6327;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.feedbacks-list { gap: 10px; }
+.patient-review {
+  border-left: 3px solid #9ab6a9;
+  border-radius: 4px;
+  box-shadow: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .service-overview-list .service-overview-row:hover {
+    transform: translateY(-2px);
+    border-color: #9ab6a9;
+    box-shadow: 0 8px 20px rgba(20, 49, 42, 0.08);
+  }
+}
+.service-overview-list .service-overview-row:active { transform: scale(.98); }
+@media (prefers-reduced-motion: reduce) {
+  .service-overview-list .service-overview-row { transition: border-color 150ms ease, box-shadow 150ms ease; }
+}
+@media (max-width: 700px) {
+  .service-overview-list .service-overview-row { min-height: 152px; }
+  .overview-link { margin: 3px -12px -12px; padding: 9px 12px; }
+}
 @media (max-width: 700px) {
   .service-overview-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .service-overview-list .service-overview-row { padding: 12px; }

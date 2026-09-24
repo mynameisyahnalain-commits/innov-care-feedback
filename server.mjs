@@ -81,18 +81,21 @@ app.post('/api/feedbacks/batch', async (req, res) => {
     if (!item || typeof item !== 'object') return res.status(422).json({ message: 'Avis invalide.' });
     const cleanService = typeof item.service === 'string' ? item.service.trim() : '';
     const cleanMessage = typeof item.message === 'string' ? item.message.trim() : '';
-    const numericRating = Number(item.rating);
+    const isGeneral = !cleanService && item.rating == null;
+    const numericRating = isGeneral ? null : Number(item.rating);
     const cleanEmail = typeof item.contact_email === 'string' && item.contact_email.trim()
       ? item.contact_email.trim() : null;
 
-    if (!cleanService || cleanService.length > 250 || (cleanEmail && cleanEmail.length > 200))
+    if ((!cleanService && !isGeneral) || cleanService.length > 250 || (cleanEmail && cleanEmail.length > 200))
       return res.status(422).json({ message: 'Service ou contact invalide.' });
-    if (!Number.isInteger(numericRating) || numericRating < 1 || numericRating > 5)
+    if (!isGeneral && (!Number.isInteger(numericRating) || numericRating < 1 || numericRating > 5))
       return res.status(422).json({ message: `Note invalide pour le service "${cleanService}".` });
     if (cleanMessage.length > 5000)
       return res.status(422).json({ message: `Commentaire trop long pour "${cleanService}".` });
+    if (isGeneral && cleanMessage.length < 10)
+      return res.status(422).json({ message: 'Décrivez votre situation en au moins 10 caractères.' });
 
-    rows.push([cleanMessage, numericRating, cleanService, cleanEmail]);
+    rows.push([cleanMessage, numericRating, cleanService || null, cleanEmail]);
   }
 
   try {

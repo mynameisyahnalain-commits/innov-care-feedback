@@ -12,17 +12,16 @@ const encodeCredentials = (username, password) =>
 
 // Services disponibles (sans Pharmacie ni Laboratoire)
 const ALL_SERVICES = [
-  { id: 'accueil',       label: 'Accueil & Réception',       icon: '🏥' },
-  { id: 'consultation',  label: 'Consultation médicale',      icon: '🩺' },
-  { id: 'soins',         label: 'Soins & Infirmerie',         icon: '💉' },
-  { id: 'radiologie',    label: 'Radiologie / Échographie',   icon: '🔬' },
-  { id: 'urgences',      label: 'Urgences',                   icon: '🚨' },
-  { id: 'maternite',     label: 'Maternité / Gynécologie',    icon: '🤱' },
-  { id: 'pediatrie',     label: 'Pédiatrie',                  icon: '👶' },
-  { id: 'chirurgie',     label: 'Chirurgie / Bloc',           icon: '🔪' },
-  { id: 'hospit',        label: 'Hospitalisation',            icon: '🛏️' },
-  { id: 'caisse',        label: 'Caisse & Facturation',       icon: '💳' },
-  { id: 'autre',         label: 'Autre service',              icon: '➕' },
+  { id: 'accueil',       label: 'Accueil & Réception' },
+  { id: 'consultation',  label: 'Consultation médicale' },
+  { id: 'soins',         label: 'Soins & Infirmerie' },
+  { id: 'radiologie',    label: 'Radiologie / Échographie' },
+  { id: 'urgences',      label: 'Urgences' },
+  { id: 'maternite',     label: 'Maternité / Gynécologie' },
+  { id: 'pediatrie',     label: 'Pédiatrie' },
+  { id: 'hospit',        label: 'Hospitalisation' },
+  { id: 'caisse',        label: 'Caisse & Facturation' },
+  { id: 'autre',         label: 'Autre service' },
 ];
 
 function Brand() {
@@ -77,6 +76,7 @@ function StarRatingInput({ value, onChange, size = 'normal' }) {
 }
 
 function StarDisplay({ rating }) {
+  if (rating == null) return <span className="unrated-label">Sans note — message libre</span>;
   return (
     <div className="star-display">
       {[1, 2, 3, 4, 5].map((v) => (
@@ -108,6 +108,35 @@ function MultiServiceModal({ onClose, onConfirm, initialFeedbacks }) {
   // Feedback temporaire pendant la notation
   const [tempRating, setTempRating] = useState(0);
   const [tempComment, setTempComment] = useState('');
+  const modalRef = useRef(null);
+
+  useEffect(() => {
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
+  }, []);
+
+  useEffect(() => { modalRef.current?.focus(); }, [ratingId]);
+
+  function handleDialogKey(event) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      ratingId ? cancelRating() : onClose();
+    }
+    if (event.key !== 'Tab') return;
+    const controls = [...modalRef.current.querySelectorAll('button:not(:disabled), textarea')];
+    const first = controls[0];
+    const last = controls[controls.length - 1];
+    if (event.shiftKey && (document.activeElement === first || document.activeElement === modalRef.current)) {
+      event.preventDefault(); last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault(); first?.focus();
+    }
+  }
 
   const ratedIds = Object.keys(feedbackMap);
   const activeSrv = ratingId ? ALL_SERVICES.find(s => s.id === ratingId) : null;
@@ -157,7 +186,7 @@ function MultiServiceModal({ onClose, onConfirm, initialFeedbacks }) {
   if (ratingId && activeSrv) {
     return (
       <div className="msm-overlay anim-fade">
-        <div className="msm-card msm-card-rate">
+        <div className="msm-card msm-card-rate" ref={modalRef} role="dialog" aria-modal="true" aria-label={activeSrv.label} tabIndex={-1} onKeyDown={handleDialogKey}>
           {/* Barre de progression: services notés / total cliqués */}
           {ratedIds.length > 0 && (
             <div className="msm-progress-bar-wrap">
@@ -172,7 +201,6 @@ function MultiServiceModal({ onClose, onConfirm, initialFeedbacks }) {
                 {ratedIds.length} service{ratedIds.length > 1 ? 's' : ''} noté{ratedIds.length > 1 ? 's' : ''}
               </div>
             )}
-            <div className="msm-rate-icon">{activeSrv.icon}</div>
             <h2 className="msm-rate-title">{activeSrv.label}</h2>
             <p className="msm-rate-sub">Comment évaluez-vous ce service ?</p>
           </div>
@@ -184,11 +212,12 @@ function MultiServiceModal({ onClose, onConfirm, initialFeedbacks }) {
               size="large"
             />
             <div className="msm-comment-wrap">
-              <label className="msm-comment-label">
+              <label className="msm-comment-label" htmlFor="service-comment">
                 Commentaire <span className="tag-optional">(optionnel)</span>
               </label>
               <textarea
-                className="form-textarea msm-textarea"
+                id="service-comment"
+                className="form-textarea msm-textarea" maxLength={5000}
                 rows={3}
                 placeholder={`Partagez votre ressenti sur ${activeSrv.label}...`}
                 value={tempComment}
@@ -218,9 +247,8 @@ function MultiServiceModal({ onClose, onConfirm, initialFeedbacks }) {
   // ── GRILLE DES SERVICES ───────────────────────────────────────────────────
   return (
     <div className="msm-overlay anim-fade">
-      <div className="msm-card">
+      <div className="msm-card" ref={modalRef} role="dialog" aria-modal="true" aria-label="Choisir les services" tabIndex={-1} onKeyDown={handleDialogKey}>
         <div className="msm-header">
-          <div className="msm-header-icon">🏥</div>
           <h2 className="msm-title">
             {ratedIds.length === 0
               ? 'Quel service avez-vous utilisé ?'
@@ -245,7 +273,6 @@ function MultiServiceModal({ onClose, onConfirm, initialFeedbacks }) {
                 className={`msm-service-tile ${isDone ? 'rated' : ''}`}
                 onClick={() => openRating(srv.id)}
               >
-                <span className="msm-tile-icon">{srv.icon}</span>
                 <span className="msm-tile-label">{srv.label}</span>
                 {isDone ? (
                   <span className="msm-tile-rated-stars">
@@ -282,6 +309,9 @@ function MultiServiceModal({ onClose, onConfirm, initialFeedbacks }) {
 // PATIENT — Formulaire principal
 // ═══════════════════════════════════════════════════════════════════════════════
 function FeedbackView() {
+  const [mode, setMode] = useState('services');
+  const [complaint, setComplaint] = useState('');
+  const [queued, setQueued] = useState(false);
   const [serviceFeedbacks, setServiceFeedbacks] = useState([]);
   const [contactEmail, setContactEmail] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -322,7 +352,11 @@ function FeedbackView() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (serviceFeedbacks.length === 0) {
+    if (mode === 'complaint' && complaint.trim().length < 10) {
+      setError('Décrivez votre situation en au moins 10 caractères.');
+      return;
+    }
+    if (mode === 'services' && serviceFeedbacks.length === 0) {
       setError('Veuillez évaluer au moins un service via le bouton ci-dessus.');
       return;
     }
@@ -331,7 +365,10 @@ function FeedbackView() {
     setSaving(true);
 
     const payload = {
-      feedbacks: serviceFeedbacks.map((f) => ({
+      feedbacks: mode === 'complaint' ? [{
+        service: null, rating: null, message: complaint.trim(),
+        contact_email: contactEmail.trim() || null,
+      }] : serviceFeedbacks.map((f) => ({
         service: f.service,
         rating: f.rating,
         message: f.comment || '',
@@ -348,11 +385,13 @@ function FeedbackView() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Impossible d'enregistrer vos avis.");
+      setQueued(false);
       setSent(true);
     } catch (err) {
       if (err.message === 'offline' || !navigator.onLine) {
         const pending = JSON.parse(localStorage.getItem('innov_pending_feedbacks') || '[]');
         localStorage.setItem('innov_pending_feedbacks', JSON.stringify([...pending, payload]));
+        setQueued(true);
         setSent(true);
       } else {
         setError(err.message || "Une erreur est survenue lors de l'envoi.");
@@ -368,10 +407,9 @@ function FeedbackView() {
         <Brand />
         <section className="card patient-card success-box">
           <div className="success-icon">✓</div>
-          <h2>Merci pour vos avis !</h2>
+          <h2>{queued ? 'Votre message est enregistré sur cet appareil' : 'Merci, votre message a été envoyé'}</h2>
           <p className="success-desc">
-            Vos retours ont bien été transmis à la <strong>Maison de Santé Innov Care</strong>.
-            Ils nous aident à améliorer notre prise en charge.
+            {queued ? 'Il sera transmis lorsque la connexion reviendra. Gardez cette page ouverte ou revenez sur ce site depuis cet appareil.' : 'Votre retour a été transmis à la Maison de Santé Innov Care pour améliorer votre accueil et votre prise en charge.'}
           </p>
           <button
             className="btn-primary"
@@ -379,6 +417,8 @@ function FeedbackView() {
               setSent(false);
               setServiceFeedbacks([]);
               setContactEmail('');
+              setComplaint('');
+              setQueued(false);
               setError('');
             }}
           >
@@ -403,14 +443,28 @@ function FeedbackView() {
         <Brand />
         <h1 className="patient-main-title">Votre avis compte pour nous</h1>
         <p className="patient-sub-title">
-          Notez chaque service que vous avez utilisé lors de votre passage.
+          Un avis, une difficulté ou une réclamation ? Nous sommes à votre écoute.
         </p>
       </header>
 
       <form className="card patient-card" onSubmit={handleSubmit}>
-        {error && <div className="error-alert">{error}</div>}
+        <fieldset className="feedback-choice" disabled={saving}>
+          <legend>Comment souhaitez-vous nous faire part de votre expérience ?</legend>
+          <div className="feedback-options">
+            <label className={`feedback-option ${mode === 'services' ? 'is-selected' : ''}`}>
+              <input type="radio" name="feedback-mode" value="services" checked={mode === 'services'} onChange={() => { setMode('services'); setError(''); }} />
+              <span><strong>Évaluer un service</strong><small>Donnez une note aux services visités.</small></span>
+            </label>
+            <label className={`feedback-option ${mode === 'complaint' ? 'is-selected' : ''}`}>
+              <input type="radio" name="feedback-mode" value="complaint" checked={mode === 'complaint'} onChange={() => { setMode('complaint'); setError(''); }} />
+              <span><strong>Faire une réclamation</strong><small>Écrivez librement, sans choisir de service.</small></span>
+            </label>
+          </div>
+        </fieldset>
+        {error && <div className="error-alert" role="alert">{error}</div>}
 
         {/* Bouton d'ouverture du modal */}
+        {mode === 'services' ? (
         <div className="open-modal-section">
           {serviceFeedbacks.length === 0 ? (
             <div className="open-modal-empty">
@@ -422,7 +476,6 @@ function FeedbackView() {
                 className="btn-open-modal"
                 onClick={() => setShowModal(true)}
               >
-                <span className="btn-open-modal-icon">🏥</span>
                 <span>Choisir et noter mes services</span>
               </button>
             </div>
@@ -437,7 +490,7 @@ function FeedbackView() {
                   className="btn-edit-services"
                   onClick={() => setShowModal(true)}
                 >
-                  ✏️ Modifier
+                   Modifier
                 </button>
               </div>
               <div className="services-rated-list">
@@ -456,6 +509,17 @@ function FeedbackView() {
             </div>
           )}
         </div>
+        ) : (
+          <div className="form-group complaint-field">
+            <label className="form-label" htmlFor="patient-complaint">Que s’est-il passé ?</label>
+            <p className="field-help" id="complaint-help">Décrivez votre difficulté ou ce que vous souhaitez nous signaler. Aucune note n’est nécessaire.</p>
+            <textarea id="patient-complaint" className="form-textarea" rows={5}
+              placeholder="Expliquez-nous votre situation…" value={complaint}
+              onChange={e => setComplaint(e.target.value)} minLength={10} maxLength={5000}
+              required aria-describedby="complaint-help" />
+            <p className="field-help">10 caractères minimum · {complaint.length}/5 000</p>
+          </div>
+        )}
 
         {/* Contact optionnel */}
         <div className="form-group" style={{ marginTop: 20 }}>
@@ -468,6 +532,7 @@ function FeedbackView() {
             className="form-input"
             placeholder="Laissez votre contact si vous désirez une réponse"
             value={contactEmail}
+            maxLength={200}
             onChange={(e) => setContactEmail(e.target.value)}
           />
         </div>
@@ -475,16 +540,15 @@ function FeedbackView() {
         {/* Bouton envoi final */}
         <button
           type="submit"
-          className={`btn-submit-final ${serviceFeedbacks.length === 0 ? 'disabled-look' : ''}`}
-          disabled={saving || serviceFeedbacks.length === 0}
+          className="btn-submit-final"
+          disabled={saving || (mode === 'services' && serviceFeedbacks.length === 0)}
         >
           {saving ? (
             <span>⏳ Envoi en cours...</span>
           ) : (
             <>
-              <span className="submit-final-icon">📨</span>
-              <span>Envoyer tous mes avis</span>
-              {serviceFeedbacks.length > 0 && (
+              <span>{mode === 'complaint' ? 'Envoyer ma réclamation' : 'Envoyer mon avis'}</span>
+              {mode === 'services' && serviceFeedbacks.length > 0 && (
                 <span className="submit-count-badge">{serviceFeedbacks.length}</span>
               )}
             </>
@@ -611,7 +675,7 @@ function AdminView() {
         <Brand />
         <div className="admin-top-actions">
           <button className="btn-secondary" onClick={() => setShowQrModal(!showQrModal)}>
-            {showQrModal ? 'Masquer QR Code' : '📲 QR Code à scanner'}
+            {showQrModal ? 'Masquer QR Code' : ' QR Code à scanner'}
           </button>
           <button className="btn-logout"
             onClick={() => { localStorage.removeItem('innov_admin'); setToken(''); }}>
@@ -635,7 +699,7 @@ function AdminView() {
               onChange={(e) => setQrUrlInput(e.target.value)} />
           </div>
           <button className="btn-primary" style={{ marginTop: 16 }} onClick={() => window.print()}>
-            🖨 Imprimer l'affiche QR Code
+             Imprimer l'affiche QR Code
           </button>
         </section>
       )}
@@ -650,7 +714,7 @@ function AdminView() {
 
       <div className="search-bar-wrap">
         <input type="text" className="form-input search-input"
-          placeholder="🔍 Rechercher par mot-clé, service ou contact..."
+          placeholder=" Rechercher par mot-clé, service ou contact..."
           value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
       </div>
 
@@ -670,7 +734,7 @@ function AdminView() {
                     ? item.service.split(', ').map((s) => (
                       <span key={s} className="service-banner-chip">{s}</span>
                     ))
-                    : <span className="service-banner-chip">Général</span>}
+                    : <span className="service-banner-chip">Réclamation générale</span>}
                 </div>
                 <div className="banner-date-badge">
                   {new Date(item.created_at).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}
@@ -686,7 +750,7 @@ function AdminView() {
               </div>
               {item.contact_email && (
                 <div className="banner-contact-badge">
-                  ✉ <strong>Contact laissé :</strong> {item.contact_email}
+                   <strong>Contact laissé :</strong> {item.contact_email}
                 </div>
               )}
             </article>
@@ -874,7 +938,7 @@ function SuperAdminView() {
                   ? item.service.split(', ').map((s) => (
                     <span key={s} className="service-banner-chip">{s}</span>
                   ))
-                  : <span className="service-banner-chip">Général</span>}
+                  : <span className="service-banner-chip">Réclamation générale</span>}
               </div>
               <div className="banner-date-badge">
                 {new Date(item.created_at).toLocaleString('fr-FR')}
@@ -886,14 +950,14 @@ function SuperAdminView() {
             </div>
             {item.contact_email && (
               <div className="banner-contact-badge">
-                ✉ <strong>Contact :</strong> {item.contact_email}
+                 <strong>Contact :</strong> {item.contact_email}
               </div>
             )}
             <div className="banner-footer-actions">
               <button type="button" className="btn-delete-action"
                 disabled={deletingId === item.id}
                 onClick={() => handleDeleteFeedback(item.id)}>
-                {deletingId === item.id ? 'Suppression...' : '🗑 Supprimer définitivement cet avis'}
+                {deletingId === item.id ? 'Suppression...' : ' Supprimer définitivement cet avis'}
               </button>
             </div>
           </article>

@@ -83,13 +83,16 @@ export default async function handler(event) {
         if (!item || typeof item !== 'object') return json(422, { message: 'Avis invalide.' });
         const service = typeof item.service === 'string' ? item.service.trim() : '';
         const message = typeof item.message === 'string' ? item.message.trim() : '';
-        const rating = Number(item.rating);
+        const isGeneral = !service && item.rating == null;
+        const rating = isGeneral ? null : Number(item.rating);
         const contact = typeof item.contact_email === 'string' ? item.contact_email.trim() || null : null;
-        if (!service || service.length > 250 || message.length > 5000 || (contact && contact.length > 200))
+        if ((!service && !isGeneral) || service.length > 250 || message.length > 5000 || (contact && contact.length > 200))
           return json(422, { message: 'Service, commentaire ou contact invalide.' });
-        if (!Number.isInteger(rating) || rating < 1 || rating > 5)
+        if (!isGeneral && (!Number.isInteger(rating) || rating < 1 || rating > 5))
           return json(422, { message: 'La note doit être comprise entre 1 et 5.' });
-        rows.push([message, rating, service, contact]);
+        if (isGeneral && message.length < 10)
+          return json(422, { message: 'Décrivez votre situation en au moins 10 caractères.' });
+        rows.push([message, rating, service || null, contact]);
       }
       const conn = await database.getConnection();
       try {

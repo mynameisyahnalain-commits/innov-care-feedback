@@ -1,7 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-
 :root {
-  --font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-family: 'Segoe UI', Arial, sans-serif;
 
   /* Official Clinic Palette */
   --primary-teal: #0D4B46;
@@ -67,7 +65,8 @@ body {
 }
 
 .brand-logo-full {
-  max-width: 210px;
+  width: 180px;
+  max-width: 100%;
   height: auto;
   object-fit: contain;
 }
@@ -88,17 +87,39 @@ body {
   margin-bottom: 24px;
 }
 
+.patient-header .brand { height: 128px; margin-bottom: 4px; }
+.patient-header .brand-logo-full { flex-shrink: 0; }
+
 .patient-main-title {
-  font-size: 24px;
-  font-weight: 800;
+  font-size: clamp(24px, 4vw, 30px);
+  font-weight: 650;
   color: var(--primary-teal);
   margin-top: 8px;
 }
 
 .patient-sub-title {
-  font-size: 14px;
+  font-size: 16px;
   color: var(--text-muted);
-  margin-top: 4px;
+  margin-top: 8px;
+}
+
+.feedback-choice { border: 0; min-width: 0; margin-bottom: 28px; }
+.feedback-choice legend { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+.feedback-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.feedback-option { display: flex; align-items: flex-start; gap: 10px; padding: 18px 14px; border: 1px solid #baccc7; border-radius: 8px; cursor: pointer; }
+.feedback-option.is-selected { border-color: var(--primary-teal); background: #eef5f2; box-shadow: inset 0 0 0 1px var(--primary-teal); }
+.feedback-option input { accent-color: var(--primary-teal); margin-top: 5px; width: 16px; height: 16px; flex-shrink: 0; }
+.feedback-option strong, .feedback-option small { display: block; }
+.feedback-option strong { font-size: 16px; font-weight: 600; }
+.feedback-option small { margin-top: 5px; font-size: 14px; color: var(--text-muted); line-height: 1.5; }
+.field-help { color: var(--text-muted); font-size: 14px; margin: 6px 0 10px; }
+.complaint-field textarea { width: 100%; font: inherit; }
+.unrated-label { font-size: 14px; color: var(--text-muted); }
+button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid #b98335; outline-offset: 3px; }
+@media (max-width: 520px) {
+  .feedback-options { grid-template-columns: 1fr; }
+  .patient-card { padding: 20px 16px; }
+  .feedback-choice legend { font-size: 17px; }
 }
 
 /* ── Cartes ── */
@@ -193,7 +214,7 @@ body {
   border: none;
   color: var(--accent-ochre);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
   padding: 0 2px;
   line-height: 1;
@@ -243,7 +264,7 @@ body {
 
 .service-modal-header h2 {
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--primary-teal);
 }
 
@@ -543,7 +564,7 @@ body {
   background: #E8F8F5;
   color: #27AE60;
   font-size: 32px;
-  font-weight: 800;
+  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -582,7 +603,7 @@ body {
 
 .admin-title {
   font-size: 26px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--primary-teal);
 }
 
@@ -877,7 +898,7 @@ body {
 
 .msm-title {
   font-size: 20px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--primary-teal);
   margin-bottom: 4px;
 }
@@ -946,7 +967,7 @@ body {
 
 .msm-service-tile.rated {
   border-color: #2E9E6A;
-  background: linear-gradient(145deg, #D4F0E4, #E8F8F0);
+  background: #eaf3ee;
   position: relative;
 }
 
@@ -1022,7 +1043,7 @@ body {
 
 .msm-progress-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--primary-teal), var(--accent-ochre));
+  background: var(--primary-teal);
   border-radius: 4px;
   transition: width 0.4s ease;
 }
@@ -1051,7 +1072,7 @@ body {
 
 .msm-rate-title {
   font-size: 22px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--primary-teal);
   margin-bottom: 4px;
 }
@@ -1087,6 +1108,17 @@ body {
   display: flex;
   gap: 12px;
   justify-content: flex-end;
+}
+
+@media (max-width: 520px) {
+  .msm-service-grid { grid-template-columns: 1fr 1fr; padding: 16px; }
+  .msm-rate-footer { flex-direction: column; }
+  .msm-cta { max-width: none; }
+  .msm-header, .msm-rate-header { padding: 54px 20px 20px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
 /* ── Phase RÉCAP ── */
@@ -1325,30 +1357,29 @@ body {
   width: 100%;
   margin-top: 24px;
   padding: 20px 24px;
-  background: linear-gradient(135deg, var(--primary-teal) 0%, #1A7A72 100%);
+  background: var(--primary-teal);
   color: #fff;
   border: none;
-  border-radius: 16px;
+  border-radius: 8px;
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 600;
   font-family: var(--font-family);
   cursor: pointer;
-  box-shadow: 0 6px 28px rgba(13, 75, 70, 0.32);
+  box-shadow: none;
   transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
   position: relative;
 }
 
 .btn-submit-final:hover:not(:disabled) {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 36px rgba(13, 75, 70, 0.42);
+  background: var(--primary-teal-dark);
 }
 
 .btn-submit-final:active:not(:disabled) {
   transform: translateY(0);
 }
 
-.btn-submit-final.disabled-look {
-  background: linear-gradient(135deg, #B0C8C5, #9FBDBA);
+.btn-submit-final:disabled {
+  background: #748b86;
   cursor: not-allowed;
   box-shadow: none;
 }

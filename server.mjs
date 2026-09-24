@@ -34,6 +34,7 @@ const pool = mysql.createPool({
 
 let usersTableReady;
 let feedbacksTableReady;
+let feedbackStorageReady;
 
 async function ensureUsersTable() {
   if (!usersTableReady) {
@@ -107,6 +108,31 @@ async function ensureFeedbacksTable() {
   await feedbacksTableReady;
 }
 
+async function verifyFeedbackStorage() {
+  if (!feedbackStorageReady) {
+    feedbackStorageReady = (async () => {
+      const connection = await pool.getConnection();
+      try {
+        await connection.beginTransaction();
+        await connection.execute(
+          'INSERT INTO feedbacks (message, rating, service, contact_email) VALUES (?, ?, ?, ?)',
+          ['Vérification technique', 5, 'Vérification technique', null]
+        );
+        await connection.rollback();
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
+    })().catch((error) => {
+      feedbackStorageReady = null;
+      throw error;
+    });
+  }
+  await feedbackStorageReady;
+}
+
 app.use(cors());
 app.use(express.json({ limit: '20kb' }));
 
@@ -135,6 +161,7 @@ app.get('/api/health', async (_req, res) => {
     await pool.query('SELECT 1');
     await ensureUsersTable();
     await ensureFeedbacksTable();
+    await verifyFeedbackStorage();
 
     res.json({
       ok: true,

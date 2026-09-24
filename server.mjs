@@ -11,7 +11,7 @@ dotenv.config({ path: process.env.NODE_ENV === 'production' ? '.env' : ['.env.lo
 
 const app = express();
 const port = Number(process.env.PORT || process.env.API_PORT || 3010);
-const adminPassword = process.env.ADMIN_PASSWORD || 'innov-care-2026';
+const adminPassword = process.env.ADMIN_PASSWORD || process.env.INITIAL_ADMIN_PASSWORD || 'innov-care-2026';
 const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD || 'innov-super-2026';
 const scrypt = promisify(scryptCallback);
 const pool = mysql.createPool({
@@ -31,6 +31,30 @@ const pool = mysql.createPool({
         }
       : undefined,
 });
+
+let usersTableReady;
+
+async function ensureUsersTable() {
+  if (!usersTableReady) {
+    usersTableReady = pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        username VARCHAR(80) NOT NULL,
+        display_name VARCHAR(120) NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        role ENUM('responsable') NOT NULL DEFAULT 'responsable',
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY users_username_unique (username)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `).catch((error) => {
+      usersTableReady = null;
+      throw error;
+    });
+  }
+  await usersTableReady;
+}
 
 app.use(cors());
 app.use(express.json({ limit: '20kb' }));
@@ -181,12 +205,16 @@ async function checkAdmin(req, res, next) {
   if (!credentials?.password) return res.status(401).json({ message: 'Accès administrateur requis.' });
   if (credentials.username === 'admin' && credentials.password === adminPassword) return next();
   try {
+    await ensureUsersTable();
     const [rows] = await pool.execute(
       "SELECT id, password_hash FROM users WHERE username = ? AND role = 'responsable' LIMIT 1",
       [credentials.username || '']
     );
     if (rows[0] && await verifyPassword(credentials.password, rows[0].password_hash)) return next();
-  } catch { return res.status(500).json({ message: 'La table des utilisateurs est indisponible.' }); }
+  } catch (error) {
+    console.error('Erreur lors de la vérification du compte administrateur:', error);
+    return res.status(500).json({ message: 'La table des utilisateurs est indisponible.' });
+  }
   return res.status(401).json({ message: 'Identifiant ou mot de passe incorrect.' });
 }
 
@@ -289,6 +317,7 @@ app.get('/api/super-admin/feedbacks', checkSuperAdmin, async (_req, res) => {
 
 app.get('/api/super-admin/users', checkSuperAdmin, async (_req, res) => {
   try {
+    await ensureUsersTable();
     const [rows] = await pool.query(
       'SELECT id, username, display_name, role, created_at, updated_at FROM users ORDER BY created_at DESC'
     );
@@ -307,6 +336,7 @@ app.post('/api/super-admin/users', checkSuperAdmin, async (req, res) => {
   if (typeof password !== 'string' || password.length < 10)
     return res.status(422).json({ message: 'Le mot de passe doit contenir au moins 10 caractères.' });
   try {
+    await ensureUsersTable();
     const passwordHash = await hashPassword(password);
     const [result] = await pool.execute(
       'INSERT INTO users (username, display_name, password_hash) VALUES (?, ?, ?)',
@@ -325,6 +355,7 @@ app.patch('/api/super-admin/users/:id/password', checkSuperAdmin, async (req, re
   if (typeof password !== 'string' || password.length < 10)
     return res.status(422).json({ message: 'Le mot de passe doit contenir au moins 10 caractères.' });
   try {
+    await ensureUsersTable();
     const passwordHash = await hashPassword(password);
     const [result] = await pool.execute('UPDATE users SET password_hash = ? WHERE id = ?', [passwordHash, req.params.id]);
     if (!result.affectedRows) return res.status(404).json({ message: 'Compte introuvable.' });
@@ -358,6 +389,7 @@ app.delete('/api/super-admin/feedbacks/:id', checkSuperAdmin, async (req, res) =
 
 app.delete('/api/super-admin/users/:id', checkSuperAdmin, async (req, res) => {
   try {
+    await ensureUsersTable();
     const [result] = await pool.execute('DELETE FROM users WHERE id = ?', [req.params.id]);
     if (!result.affectedRows) return res.status(404).json({ message: 'Compte introuvable.' });
     res.json({ ok: true });

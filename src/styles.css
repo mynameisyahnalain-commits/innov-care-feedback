@@ -1480,3 +1480,42 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
   .msm-tile-label { text-align: center; justify-content: center; }
   .service-tile-action, .msm-tile-rated-stars { grid-column: 1; }
 }
+
+/* Synthèse des services et messages de l’administration. */
+.service-overview { border: 1px solid #d5e1da; background: white; border-radius: 10px; margin-bottom: 30px; overflow: hidden; }
+.overview-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 20px; background: #edf5f0; }
+.overview-heading h2, .review-list-heading h2 { font-size: 19px; color: var(--primary-teal); }
+.overview-heading p { font-size: 14px; color: var(--text-muted); margin-top: 5px; }
+.overview-heading button { flex-shrink: 0; }
+.service-overview-row { display: grid; grid-template-columns: 42px minmax(0, 1fr) 96px 20px; align-items: center; gap: 14px; width: 100%; border: 0; border-bottom: 1px solid #e2ebe6; background: white; padding: 15px 20px; font: inherit; text-align: left; color: var(--text-dark); cursor: pointer; }
+.service-overview-row:hover, .service-overview-row.selected { background: #f0f7f2; }
+.service-overview-row.selected { box-shadow: inset 4px 0 #216b50; }
+.service-overview-row .service-symbol { width: 40px; height: 40px; border-radius: 8px; }
+.service-overview-row .service-symbol svg { width: 24px; height: 24px; }
+.overview-service strong { display: block; font-size: 15px; }
+.overview-service small, .overview-score small { display: block; color: var(--text-muted); font-size: 12px; margin-top: 3px; }
+.overview-score { text-align: right; }
+.overview-score strong { font-size: 20px; color: var(--primary-teal); }
+.score-track { display: block; height: 5px; background: #e2e9e4; border-radius: 3px; margin-top: 5px; overflow: hidden; }
+.score-track > span { display: block; height: 100%; background: #b5802f; }
+.overview-arrow { color: #2a6f55; }
+.overview-footnote { padding: 12px 20px; color: var(--text-muted); font-size: 12px; }
+.review-list-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+.review-list-heading > span { color: var(--text-muted); font-size: 13px; flex-shrink: 0; }
+.patient-review { border: 1px solid #d6e1dc; border-radius: 8px; padding: 20px; background: white; box-shadow: 0 2px 6px #164a3310; }
+.review-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px 16px; }
+.review-header > strong { font-size: 16px; color: var(--primary-teal); }
+.review-header time { color: var(--text-muted); font-size: 12px; }
+.review-rating { margin: 10px 0; }
+.review-message { font-size: 16px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.review-message em { color: var(--text-muted); font-size: 14px; }
+.review-contact { border-top: 1px solid #e6ece8; padding-top: 10px; margin-top: 14px; font-size: 13px; color: var(--text-muted); overflow-wrap: anywhere; }
+@media (max-width: 520px) {
+  .overview-heading { flex-direction: column; padding: 16px; }
+  .service-overview-row { padding: 14px 12px; gap: 10px; grid-template-columns: 32px minmax(0, 1fr) 70px; }
+  .service-overview-row .service-symbol { width: 32px; height: 36px; }
+  .overview-arrow { display: none; }
+  .overview-score strong { font-size: 17px; }
+  .overview-service strong { font-size: 14px; }
+  .patient-review { padding: 16px; }
+}

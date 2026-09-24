@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
+import { feedbackServices, summarizeFeedbacks } from './feedback-summary.mjs';
 
 const LOGO_SRC = '/logo.png';
 const apiBase = import.meta.env.VITE_API_BASE_URL || '';
@@ -594,6 +595,7 @@ function FeedbackView() {
 // ADMIN — Lecture seule
 // ═══════════════════════════════════════════════════════════════════════════════
 function AdminView() {
+  const [selectedService, setSelectedService] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [token, setToken] = useState(localStorage.getItem('innov_admin') || '');
@@ -662,7 +664,9 @@ function AdminView() {
     }
   }
 
+  const serviceSummaries = summarizeFeedbacks(feedbacks);
   const filteredFeedbacks = feedbacks.filter((f) => {
+    if (selectedService && !feedbackServices(f).includes(selectedService)) return false;
     if (!searchTerm.trim()) return true;
     const q = searchTerm.toLowerCase();
     return (
@@ -743,6 +747,37 @@ function AdminView() {
         <div className="badge-count-total">{feedbacks.length} avis reçu(s)</div>
       </div>
 
+      {serviceSummaries.length > 0 && (
+        <section className="service-overview" aria-labelledby="service-overview-title">
+          <div className="overview-heading">
+            <div><h2 id="service-overview-title">Les services en un regard</h2>
+              <p>Moyennes sur les notes reçues. Cliquez sur un service pour lire ses remarques.</p></div>
+            <button type="button" className="btn-secondary" onClick={() => { setSelectedService(''); setSearchTerm(''); }}>Tous les avis</button>
+          </div>
+          <div className="service-overview-list">
+            {serviceSummaries.map(summary => {
+              const service = ALL_SERVICES.find(s => s.label === summary.service);
+              return <button type="button" key={summary.service}
+                className={`service-overview-row ${selectedService === summary.service ? 'selected' : ''}`}
+                aria-pressed={selectedService === summary.service}
+                onClick={() => { setSelectedService(summary.service); setSearchTerm(''); }}>
+                <ServiceIcon id={service?.id || 'autre'} />
+                <span className="overview-service"><strong>{summary.service}</strong>
+                  <small>{summary.count} avis · {summary.comments} remarque{summary.comments > 1 ? 's' : ''}</small></span>
+                <span className="overview-score">
+                  <strong>{summary.average == null ? 'Sans note' : `${summary.average.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}/5`}</strong>
+                  {summary.average != null && <span className="score-track" aria-hidden="true"><span style={{ width: `${summary.average * 20}%` }} /></span>}
+                  <small>{summary.rated} note{summary.rated > 1 ? 's' : ''}</small>
+                </span>
+                <span className="overview-arrow" aria-hidden="true">→</span>
+              </button>;
+            })}
+          </div>
+          <p className="overview-footnote">Les avis sans note sont exclus des moyennes. Un ancien avis associé à plusieurs services compte dans chacun d’eux.</p>
+        </section>
+      )}
+
+      <div className="review-list-heading"><h2>{selectedService || 'Tous les avis'}</h2><span>{filteredFeedbacks.length} résultat{filteredFeedbacks.length > 1 ? 's' : ''}</span></div>
       <div className="search-bar-wrap">
         <input type="text" className="form-input search-input"
           placeholder=" Rechercher par mot-clé, service ou contact..."
@@ -754,33 +789,23 @@ function AdminView() {
       <div className="feedbacks-list">
         {filteredFeedbacks.length === 0 ? (
           <div className="card empty-card">
-            {searchTerm ? 'Aucun message ne correspond à votre recherche.' : 'Aucun message reçu pour le moment.'}
+            {searchTerm || selectedService ? 'Aucun message ne correspond à votre sélection.' : 'Aucun message reçu pour le moment.'}
           </div>
         ) : (
           filteredFeedbacks.map((item) => (
-            <article key={item.id} className="card modern-message-banner">
-              <div className="banner-top-bar">
-                <div className="banner-service-tags">
-                  {item.service
-                    ? item.service.split(', ').map((s) => (
-                      <span key={s} className="service-banner-chip">{s}</span>
-                    ))
-                    : <span className="service-banner-chip">Réclamation générale</span>}
-                </div>
-                <div className="banner-date-badge">
+            <article key={item.id} className="patient-review">
+              <header className="review-header">
+                <strong>{feedbackServices(item).join(' · ')}</strong>
+                <time dateTime={item.created_at}>
                   {new Date(item.created_at).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}
-                </div>
-              </div>
-              <div className="banner-rating-row">
+                </time>
+              </header>
+              <div className="review-rating">
                 <StarDisplay rating={item.rating} />
               </div>
-              <div className="banner-message-body">
-                <span className="quote-icon">"</span>
-                <p className="banner-text">{item.message || <em>Aucun commentaire</em>}</p>
-                <span className="quote-icon-end">"</span>
-              </div>
+              <p className="review-message">{item.message?.trim() || <em>Aucune remarque écrite</em>}</p>
               {item.contact_email && (
-                <div className="banner-contact-badge">
+                <div className="review-contact">
                    <strong>Contact laissé :</strong> {item.contact_email}
                 </div>
               )}

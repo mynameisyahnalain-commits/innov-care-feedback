@@ -17,9 +17,9 @@ const scrypt = promisify(scryptCallback);
 const pool = mysql.createPool({
   host: process.env.DB_HOST || '127.0.0.1',
   port: Number(process.env.DB_PORT || 3306),
-  user: process.env.DB_USERNAME || 'root',
+  user: process.env.DB_USERNAME || process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_DATABASE || 'defaultdb',
+  database: process.env.DB_DATABASE || process.env.DB_NAME || 'defaultdb',
 
   waitForConnections: true,
   connectionLimit: 5,
@@ -61,7 +61,7 @@ app.get('/api/health', async (_req, res) => {
 
     res.json({
       ok: true,
-      database: process.env.DB_DATABASE || 'defaultdb',
+      database: process.env.DB_DATABASE || process.env.DB_NAME || 'defaultdb',
     });
   } catch (error) {
     console.error('Erreur connexion MySQL Aiven:', error);
@@ -270,7 +270,7 @@ app.get('/api/super-admin/overview', checkSuperAdmin, async (_req, res) => {
     const [[average]] = await pool.query('SELECT ROUND(AVG(rating), 1) AS average FROM feedbacks');
     const [statuses] = await pool.query('SELECT status, COUNT(*) AS total FROM feedbacks GROUP BY status');
     res.json({
-      database: process.env.DB_DATABASE || 'code',
+      database: process.env.DB_DATABASE || process.env.DB_NAME || 'code',
       total: Number(total.total),
       average: average.average === null ? null : Number(average.average),
       statuses,

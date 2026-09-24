@@ -1543,3 +1543,32 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
   .service-overview-list .service-overview-row { flex: 0 0 220px; scroll-snap-align: start; padding: 18px; }
   .service-overview-list .overview-service strong { font-size: 15px; }
 }
+
+/* Tableau de bord compact : tous les services restent visibles. */
+.admin-container:has(.service-overview) { max-width: 1240px; padding-top: 8px; }
+.admin-simple-header { min-height: 0; margin-bottom: 20px; padding: 0 0 10px; gap: 16px; }
+.admin-simple-header .brand { height: 84px; margin: 0; overflow: hidden; flex-shrink: 0; }
+.admin-simple-header .brand-logo-full { width: 130px; }
+.service-overview-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; overflow: visible; padding: 0; }
+.service-overview-list .service-overview-row { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 8px 10px; padding: 16px; border-radius: 4px; border: 1px solid #ccd9d1; box-shadow: none; }
+.service-overview-list .service-symbol { width: 34px; height: 34px; border-radius: 4px; }
+.service-overview-list .overview-service { align-self: center; }
+.service-overview-list .overview-service strong { min-height: 0; font-size: 14px; }
+.service-overview-list .overview-service small { font-size: 11px; }
+.service-overview-list .overview-score { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; margin-top: 2px; }
+.service-overview-list .overview-score strong { font-size: 25px; }
+.service-overview-list .overview-score small { grid-column: 2; grid-row: 1; font-size: 11px; }
+.service-overview-list .score-track { grid-column: 1 / -1; grid-row: 2; margin: 0; height: 4px; }
+.service-overview-list .overview-arrow { display: none; }
+.service-symbol-cardiologie { background: #fce3df; color: #a53d37; }
+.service-symbol-echographie { background: #e0edf9; color: #285e92; }
+@media (max-width: 1000px) {
+  .service-overview-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+  .service-overview-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .service-overview-list .service-overview-row { padding: 12px; }
+  .admin-simple-header { flex-wrap: wrap; }
+  .service-overview-list .overview-score { grid-template-columns: 1fr; }
+  .service-overview-list .overview-score small { grid-column: 1; grid-row: 3; }
+}

@@ -16,7 +16,9 @@ const ALL_SERVICES = [
   { id: 'accueil',       label: 'Accueil & Réception' },
   { id: 'consultation',  label: 'Consultation médicale' },
   { id: 'soins',         label: 'Soins & Infirmerie' },
-  { id: 'radiologie',    label: 'Radiologie / Échographie' },
+  { id: 'radiologie',    label: 'Radiologie' },
+  { id: 'echographie',   label: 'Échographie' },
+  { id: 'cardiologie',   label: 'Cardiologie' },
   { id: 'urgences',      label: 'Urgences' },
   { id: 'maternite',     label: 'Maternité / Gynécologie' },
   { id: 'pediatrie',     label: 'Pédiatrie' },
@@ -26,6 +28,8 @@ const ALL_SERVICES = [
 ];
 
 const SERVICE_SYMBOLS = {
+  cardiologie: <><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" /><path d="M3 12h5l2-4 3 8 2-4h6" /></>,
+  echographie: <><rect x="2" y="3" width="15" height="12" rx="2" /><path d="M6 19h7M9 15v4M6 8q3-3 6 0M7 11q2-2 4 0M17 8h2v8a2 2 0 0 0 4 0v-4M21 9h2v3h-2z" /></>,
   accueil: <><circle cx="12" cy="6" r="3" /><path d="M6 15v-2a6 6 0 0 1 12 0v2M3 15h18v6H3zM8 18h8" /></>,
   consultation: <><path d="M5 3v5a5 5 0 0 0 10 0V3M3 3h4M13 3h4M10 13v3a5 5 0 0 0 10 0v-2" /><circle cx="20" cy="11" r="2" /></>,
   soins: <><path d="m15 3 6 6M17 5l-3 3M19 7l-3 3M12 6l6 6-8 8H4v-6zM4 20l-2 2M9 11l3 3M7 14l2 2" /></>,
@@ -664,7 +668,11 @@ function AdminView() {
     }
   }
 
-  const serviceSummaries = summarizeFeedbacks(feedbacks);
+  const receivedSummaries = summarizeFeedbacks(feedbacks);
+  const serviceSummaries = ALL_SERVICES.map(service => receivedSummaries.find(s => s.service === service.label)
+    || { service: service.label, count: 0, comments: 0, rated: 0, average: null });
+  // Keep general and legacy combined feedback accessible without inventing separate ratings.
+  serviceSummaries.push(...receivedSummaries.filter(s => !ALL_SERVICES.some(service => service.label === s.service)));
   const filteredFeedbacks = feedbacks.filter((f) => {
     if (selectedService && !feedbackServices(f).includes(selectedService)) return false;
     if (!searchTerm.trim()) return true;
@@ -765,9 +773,9 @@ function AdminView() {
                 <span className="overview-service"><strong>{summary.service}</strong>
                   <small>{summary.count} avis · {summary.comments} remarque{summary.comments > 1 ? 's' : ''}</small></span>
                 <span className="overview-score">
-                  <strong>{summary.average == null ? 'Sans note' : `${summary.average.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}/5`}</strong>
+                  <strong>{summary.average == null ? '—' : `${summary.average.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}/5`}</strong>
                   {summary.average != null && <span className="score-track" aria-hidden="true"><span style={{ width: `${summary.average * 20}%` }} /></span>}
-                  <small>{summary.rated} note{summary.rated > 1 ? 's' : ''}</small>
+                  <small>{summary.rated ? `${summary.rated} note${summary.rated > 1 ? 's' : ''}` : 'Pas encore noté'}</small>
                 </span>
                 <span className="overview-arrow" aria-hidden="true">→</span>
               </button>;

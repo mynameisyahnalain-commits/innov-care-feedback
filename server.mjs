@@ -70,7 +70,55 @@ app.get('/api/health', async (_req, res) => {
   }
 });
 
-// ─── Soumission d'un avis patient ───────────────────────────────────────────
+// ─── Soumission d'un lot d'avis patients (multi-services) ──────────────────
+app.post('/api/feedbacks/batch', async (req, res) => {
+  const { feedbacks: items } = req.body || {};
+  if (!Array.isArray(items) || items.length === 0 || items.length > 15)
+    return res.status(422).json({ message: 'Fournissez entre 1 et 15 avis.' });
+
+  const rows = [];
+  for (const item of items) {
+    if (!item || typeof item !== 'object') return res.status(422).json({ message: 'Avis invalide.' });
+    const cleanService = typeof item.service === 'string' ? item.service.trim() : '';
+    const cleanMessage = typeof item.message === 'string' ? item.message.trim() : '';
+    const numericRating = Number(item.rating);
+    const cleanEmail = typeof item.contact_email === 'string' && item.contact_email.trim()
+      ? item.contact_email.trim() : null;
+
+    if (!cleanService || cleanService.length > 250 || (cleanEmail && cleanEmail.length > 200))
+      return res.status(422).json({ message: 'Service ou contact invalide.' });
+    if (!Number.isInteger(numericRating) || numericRating < 1 || numericRating > 5)
+      return res.status(422).json({ message: `Note invalide pour le service "${cleanService}".` });
+    if (cleanMessage.length > 5000)
+      return res.status(422).json({ message: `Commentaire trop long pour "${cleanService}".` });
+
+    rows.push([cleanMessage, numericRating, cleanService, cleanEmail]);
+  }
+
+  try {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const ids = [];
+      for (const row of rows) {
+        const [result] = await conn.execute(
+          'INSERT INTO feedbacks (message, rating, service, contact_email) VALUES (?, ?, ?, ?)',
+          row
+        );
+        ids.push(result.insertId);
+      }
+      await conn.commit();
+      res.status(201).json({ ids, message: `${ids.length} avis enregistré(s).` });
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  } catch { res.status(500).json({ message: "Impossible d'enregistrer les avis." }); }
+});
+
+// ─── Soumission d'un avis patient (endpoint simple, rétrocompat) ─────────────
 app.post('/api/feedbacks', async (req, res) => {
   const { message, rating, service, services, contact_email } = req.body || {};
   const cleanMessage = typeof message === 'string' ? message.trim() : '';

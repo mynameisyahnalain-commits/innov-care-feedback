@@ -74,6 +74,41 @@ export default async function handler(event) {
       return json(200, { ok: true, database: process.env.DB_DATABASE || 'code' });
     }
 
+    if (event.httpMethod === 'POST' && path === '/feedbacks/batch') {
+      const items = body.feedbacks;
+      if (!Array.isArray(items) || items.length === 0 || items.length > 15)
+        return json(422, { message: 'Fournissez entre 1 et 15 avis.' });
+      const rows = [];
+      for (const item of items) {
+        if (!item || typeof item !== 'object') return json(422, { message: 'Avis invalide.' });
+        const service = typeof item.service === 'string' ? item.service.trim() : '';
+        const message = typeof item.message === 'string' ? item.message.trim() : '';
+        const rating = Number(item.rating);
+        const contact = typeof item.contact_email === 'string' ? item.contact_email.trim() || null : null;
+        if (!service || service.length > 250 || message.length > 5000 || (contact && contact.length > 200))
+          return json(422, { message: 'Service, commentaire ou contact invalide.' });
+        if (!Number.isInteger(rating) || rating < 1 || rating > 5)
+          return json(422, { message: 'La note doit être comprise entre 1 et 5.' });
+        rows.push([message, rating, service, contact]);
+      }
+      const conn = await database.getConnection();
+      try {
+        await conn.beginTransaction();
+        const ids = [];
+        for (const row of rows) {
+          const [result] = await conn.execute('INSERT INTO feedbacks (message, rating, service, contact_email) VALUES (?, ?, ?, ?)', row);
+          ids.push(result.insertId);
+        }
+        await conn.commit();
+        return json(201, { ids, message: `${ids.length} avis enregistré(s).` });
+      } catch (error) {
+        await conn.rollback();
+        throw error;
+      } finally {
+        conn.release();
+      }
+    }
+
     if (event.httpMethod === 'POST' && path === '/feedbacks') {
       const cleanMessage = typeof body.message === 'string' ? body.message.trim() : '';
       const selectedServices = Array.isArray(body.services) ? [...new Set(body.services.filter(item => typeof item === 'string').map(item => item.trim()).filter(Boolean))] : (typeof body.service === 'string' && body.service.trim() ? [body.service.trim()] : []);

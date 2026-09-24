@@ -10,20 +10,19 @@ const encodeCredentials = (username, password) =>
   btoa(JSON.stringify({ username, password }))
     .replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
 
+// Services disponibles (sans Pharmacie ni Laboratoire)
 const ALL_SERVICES = [
-  'Accueil & Réception',
-  'Consultation médicale',
-  'Soins & Infirmerie',
-  'Laboratoire / Analyses',
-  'Radiologie / Échographie',
-  'Pharmacie',
-  'Urgences',
-  'Maternité / Gynécologie',
-  'Pédiatrie',
-  'Chirurgie / Bloc',
-  'Hospitalisation',
-  'Caisse & Facturation',
-  'Autre service',
+  { id: 'accueil',       label: 'Accueil & Réception',       icon: '🏥' },
+  { id: 'consultation',  label: 'Consultation médicale',      icon: '🩺' },
+  { id: 'soins',         label: 'Soins & Infirmerie',         icon: '💉' },
+  { id: 'radiologie',    label: 'Radiologie / Échographie',   icon: '🔬' },
+  { id: 'urgences',      label: 'Urgences',                   icon: '🚨' },
+  { id: 'maternite',     label: 'Maternité / Gynécologie',    icon: '🤱' },
+  { id: 'pediatrie',     label: 'Pédiatrie',                  icon: '👶' },
+  { id: 'chirurgie',     label: 'Chirurgie / Bloc',           icon: '🔪' },
+  { id: 'hospit',        label: 'Hospitalisation',            icon: '🛏️' },
+  { id: 'caisse',        label: 'Caisse & Facturation',       icon: '💳' },
+  { id: 'autre',         label: 'Autre service',              icon: '➕' },
 ];
 
 function Brand() {
@@ -34,123 +33,20 @@ function Brand() {
   );
 }
 
-// ─── Sélecteur de services sous forme de Modal Pop-Up au centre ──────────────
-function ServiceSelector({ selectedServices, onChange }) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  function toggle(srv) {
-    if (selectedServices.includes(srv)) {
-      onChange(selectedServices.filter((s) => s !== srv));
-    } else {
-      onChange([...selectedServices, srv]);
-    }
-  }
-
-  function remove(srv, e) {
-    e.stopPropagation();
-    onChange(selectedServices.filter((s) => s !== srv));
-  }
-
-  return (
-    <div className="service-selector-container">
-      {/* Zone de déclenchement sur le formulaire */}
-      <div
-        className="service-selector-trigger"
-        onClick={() => setIsOpen(true)}
-      >
-        {selectedServices.length === 0 ? (
-          <span className="placeholder-text">👉 Appuyez ici pour choisir vos services...</span>
-        ) : (
-          <div className="selected-tags-inline">
-            {selectedServices.map((srv) => (
-              <span key={srv} className="selected-tag-item">
-                {srv}
-                <button
-                  type="button"
-                  className="tag-remove-btn"
-                  onClick={(e) => remove(srv, e)}
-                  title="Retirer ce service"
-                >
-                  ✕
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-        <span className="dropdown-arrow">🔍 Sélectionner</span>
-      </div>
-
-      {/* POP-UP MODAL AU CENTRE DE LA PAGE */}
-      {isOpen && (
-        <div className="service-modal-overlay anim-fade">
-          <div className="service-modal-card">
-            <div className="service-modal-header">
-              <h2>Choix des services médicalisés</h2>
-              <button
-                type="button"
-                className="service-modal-close-btn"
-                onClick={() => setIsOpen(false)}
-              >
-                ✕
-              </button>
-            </div>
-
-            <p className="service-modal-tip">
-              Cochez tous les services par lesquels vous êtes passé(e) :
-            </p>
-
-            <div className="service-modal-list">
-              {ALL_SERVICES.map((srv) => {
-                const isChecked = selectedServices.includes(srv);
-                return (
-                  <div
-                    key={srv}
-                    className={`service-modal-item ${isChecked ? 'checked' : ''}`}
-                    onClick={() => toggle(srv)}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => {}}
-                      className="service-modal-checkbox"
-                    />
-                    <span className="service-modal-label">{srv}</span>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="service-modal-footer">
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => setIsOpen(false)}
-              >
-                ✓ Valider la sélection ({selectedServices.length})
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Étoiles d'évaluation (vide par défaut, se remplit uniquement au clic) ────
-function StarRatingInput({ value, onChange }) {
+// ─── Étoiles d'évaluation ────────────────────────────────────────────────────
+function StarRatingInput({ value, onChange, size = 'normal' }) {
   const [hover, setHover] = useState(0);
   const labels = {
-    1: '1/5 — Très insatisfait',
-    2: '2/5 — Insatisfait',
-    3: '3/5 — Passable / Moyen',
-    4: '4/5 — Satisfait',
-    5: '5/5 — Très satisfait',
+    1: 'Très insatisfait',
+    2: 'Insatisfait',
+    3: 'Passable',
+    4: 'Satisfait',
+    5: 'Très satisfait',
   };
-
   const activeRating = hover || value;
 
   return (
-    <div className="star-rating-input-container">
+    <div className={`star-rating-input-container ${size === 'large' ? 'star-large' : ''}`}>
       <div className="stars-row">
         {[1, 2, 3, 4, 5].map((star) => {
           const isFilled = star <= activeRating;
@@ -171,9 +67,9 @@ function StarRatingInput({ value, onChange }) {
       </div>
       <div className="rating-text-hint">
         {activeRating > 0 ? (
-          labels[activeRating]
+          <span className="rating-label-active">{activeRating}/5 — {labels[activeRating]}</span>
         ) : (
-          <span className="rating-not-set">Cliquez sur les étoiles pour noter</span>
+          <span className="rating-not-set">Appuyez sur une étoile pour noter</span>
         )}
       </div>
     </div>
@@ -191,14 +87,204 @@ function StarDisplay({ rating }) {
   );
 }
 
+// ─── Modal multi-services ─────────────────────────────────────────────────────
+/*
+  Nouveau flux :
+  - Grille des services toujours visible
+  - Clic sur une tuile → panneau de notation glisse en place (dans le même modal)
+  - Une fois noté → retour à la grille (service marqué avec ✓ + étoiles)
+  - Bouton "Fermer & confirmer" quand au moins 1 service noté
+*/
+function MultiServiceModal({ onClose, onConfirm, initialFeedbacks }) {
+  // feedbackMap: { serviceId: { rating, comment } }
+  const [feedbackMap, setFeedbackMap] = useState(() => Object.fromEntries(
+    initialFeedbacks.flatMap(f => {
+      const service = ALL_SERVICES.find(s => s.label === f.service);
+      return service ? [[service.id, { rating: f.rating, comment: f.comment }]] : [];
+    })
+  ));
+  // Service en cours de notation (null = grille visible)
+  const [ratingId, setRatingId] = useState(null);
+  // Feedback temporaire pendant la notation
+  const [tempRating, setTempRating] = useState(0);
+  const [tempComment, setTempComment] = useState('');
+
+  const ratedIds = Object.keys(feedbackMap);
+  const activeSrv = ratingId ? ALL_SERVICES.find(s => s.id === ratingId) : null;
+
+  function openRating(id) {
+    const existing = feedbackMap[id] || { rating: 0, comment: '' };
+    setTempRating(existing.rating);
+    setTempComment(existing.comment);
+    setRatingId(id);
+  }
+
+  function saveAndBack() {
+    if (tempRating === 0) return; // note obligatoire
+    setFeedbackMap(prev => ({
+      ...prev,
+      [ratingId]: { rating: tempRating, comment: tempComment },
+    }));
+    setRatingId(null);
+    setTempRating(0);
+    setTempComment('');
+  }
+
+  function cancelRating() {
+    setRatingId(null);
+    setTempRating(0);
+    setTempComment('');
+  }
+
+  function removeService(id) {
+    setFeedbackMap(prev => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }
+
+  function handleConfirm() {
+    const entries = ratedIds.map(id => {
+      const srv = ALL_SERVICES.find(s => s.id === id);
+      const fb = feedbackMap[id];
+      return { service: srv.label, rating: fb.rating, comment: fb.comment || '' };
+    });
+    onConfirm(entries);
+  }
+
+  // ── PANNEAU DE NOTATION (remplace la grille) ──────────────────────────────
+  if (ratingId && activeSrv) {
+    return (
+      <div className="msm-overlay anim-fade">
+        <div className="msm-card msm-card-rate">
+          {/* Barre de progression: services notés / total cliqués */}
+          {ratedIds.length > 0 && (
+            <div className="msm-progress-bar-wrap">
+              <div className="msm-progress-bar-fill" style={{ width: '100%' }} />
+            </div>
+          )}
+
+          <div className="msm-rate-header">
+            <button className="msm-close" onClick={cancelRating} aria-label="Retour">✕</button>
+            {ratedIds.length > 0 && (
+              <div className="msm-rate-step-badge">
+                {ratedIds.length} service{ratedIds.length > 1 ? 's' : ''} noté{ratedIds.length > 1 ? 's' : ''}
+              </div>
+            )}
+            <div className="msm-rate-icon">{activeSrv.icon}</div>
+            <h2 className="msm-rate-title">{activeSrv.label}</h2>
+            <p className="msm-rate-sub">Comment évaluez-vous ce service ?</p>
+          </div>
+
+          <div className="msm-rate-body">
+            <StarRatingInput
+              value={tempRating}
+              onChange={setTempRating}
+              size="large"
+            />
+            <div className="msm-comment-wrap">
+              <label className="msm-comment-label">
+                Commentaire <span className="tag-optional">(optionnel)</span>
+              </label>
+              <textarea
+                className="form-textarea msm-textarea"
+                rows={3}
+                placeholder={`Partagez votre ressenti sur ${activeSrv.label}...`}
+                value={tempComment}
+                onChange={(e) => setTempComment(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="msm-rate-footer">
+            <button type="button" className="btn-secondary" onClick={cancelRating}>
+              ← Retour aux services
+            </button>
+            <button
+              type="button"
+              className="btn-primary msm-cta"
+              disabled={tempRating === 0}
+              onClick={saveAndBack}
+            >
+              ✓ Valider ce service
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── GRILLE DES SERVICES ───────────────────────────────────────────────────
+  return (
+    <div className="msm-overlay anim-fade">
+      <div className="msm-card">
+        <div className="msm-header">
+          <div className="msm-header-icon">🏥</div>
+          <h2 className="msm-title">
+            {ratedIds.length === 0
+              ? 'Quel service avez-vous utilisé ?'
+              : 'Un autre service ?'}
+          </h2>
+          <p className="msm-subtitle">
+            {ratedIds.length === 0
+              ? 'Appuyez sur un service pour le noter'
+              : `${ratedIds.length} service${ratedIds.length > 1 ? 's notés' : ' noté'} — choisissez-en un autre ou terminez`}
+          </p>
+          <button className="msm-close" onClick={onClose} aria-label="Fermer">✕</button>
+        </div>
+
+        <div className="msm-service-grid">
+          {ALL_SERVICES.map((srv) => {
+            const fb = feedbackMap[srv.id];
+            const isDone = !!fb;
+            return (
+              <button
+                key={srv.id}
+                type="button"
+                className={`msm-service-tile ${isDone ? 'rated' : ''}`}
+                onClick={() => openRating(srv.id)}
+              >
+                <span className="msm-tile-icon">{srv.icon}</span>
+                <span className="msm-tile-label">{srv.label}</span>
+                {isDone ? (
+                  <span className="msm-tile-rated-stars">
+                    {[1,2,3,4,5].map(v => (
+                      <span key={v} style={{ color: v <= fb.rating ? '#F5A623' : 'rgba(255,255,255,0.4)', fontSize: 11 }}>★</span>
+                    ))}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="msm-footer">
+          {ratedIds.length > 0 ? (
+            <button
+              type="button"
+              className="btn-primary msm-cta"
+              onClick={handleConfirm}
+            >
+              ✓ Terminer ({ratedIds.length} avis)
+            </button>
+          ) : (
+            <p className="msm-footer-hint">Sélectionnez un service pour commencer</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 // ═══════════════════════════════════════════════════════════════════════════════
-// PATIENT — Formulaire unique, propre et direct
+// PATIENT — Formulaire principal
 // ═══════════════════════════════════════════════════════════════════════════════
 function FeedbackView() {
-  const [services, setServices] = useState([]);
-  const [rating, setRating] = useState(0); // Vide par défaut
-  const [message, setMessage] = useState('');
+  const [serviceFeedbacks, setServiceFeedbacks] = useState([]);
   const [contactEmail, setContactEmail] = useState('');
+  const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
@@ -209,16 +295,17 @@ function FeedbackView() {
       const pending = JSON.parse(localStorage.getItem('innov_pending_feedbacks') || '[]');
       if (!pending.length || !navigator.onLine) return;
       const remaining = [];
-      for (const fb of pending) {
+      for (const payload of pending) {
         try {
-          const r = await fetch(`${apiBase}/api/feedbacks`, {
+          const endpoint = Array.isArray(payload.feedbacks) ? '/api/feedbacks/batch' : '/api/feedbacks';
+          const r = await fetch(`${apiBase}${endpoint}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(fb),
+            body: JSON.stringify(payload),
           });
-          if (!r.ok) remaining.push(fb);
+          if (!r.ok) remaining.push(payload);
         } catch {
-          remaining.push(fb);
+          remaining.push(payload);
         }
       }
       localStorage.setItem('innov_pending_feedbacks', JSON.stringify(remaining));
@@ -228,18 +315,15 @@ function FeedbackView() {
     return () => window.removeEventListener('online', syncPending);
   }, []);
 
+  function handleModalConfirm(entries) {
+    setServiceFeedbacks(entries);
+    setShowModal(false);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
-    if (services.length === 0) {
-      setError('Veuillez choisir au moins un service concerné par votre passage.');
-      return;
-    }
-    if (rating === 0) {
-      setError('Veuillez sélectionner une note avec les étoiles.');
-      return;
-    }
-    if (!message.trim() || message.trim().length < 3) {
-      setError('Veuillez écrire votre message ou remarque.');
+    if (serviceFeedbacks.length === 0) {
+      setError('Veuillez évaluer au moins un service via le bouton ci-dessus.');
       return;
     }
 
@@ -247,21 +331,23 @@ function FeedbackView() {
     setSaving(true);
 
     const payload = {
-      services,
-      rating,
-      message: message.trim(),
-      contact_email: contactEmail.trim() || null,
+      feedbacks: serviceFeedbacks.map((f) => ({
+        service: f.service,
+        rating: f.rating,
+        message: f.comment || '',
+        contact_email: contactEmail.trim() || null,
+      })),
     };
 
     try {
       if (!navigator.onLine) throw new Error('offline');
-      const res = await fetch(`${apiBase}/api/feedbacks`, {
+      const res = await fetch(`${apiBase}/api/feedbacks/batch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Impossible d\'enregistrer votre avis.');
+      if (!res.ok) throw new Error(data.message || "Impossible d'enregistrer vos avis.");
       setSent(true);
     } catch (err) {
       if (err.message === 'offline' || !navigator.onLine) {
@@ -269,7 +355,7 @@ function FeedbackView() {
         localStorage.setItem('innov_pending_feedbacks', JSON.stringify([...pending, payload]));
         setSent(true);
       } else {
-        setError(err.message || 'Une erreur est survenue lors de l\'envoi.');
+        setError(err.message || "Une erreur est survenue lors de l'envoi.");
       }
     } finally {
       setSaving(false);
@@ -282,19 +368,18 @@ function FeedbackView() {
         <Brand />
         <section className="card patient-card success-box">
           <div className="success-icon">✓</div>
-          <h2>Merci pour votre message !</h2>
+          <h2>Merci pour vos avis !</h2>
           <p className="success-desc">
-            Votre avis a bien été transmis à la <strong>Maison de Santé Innov Care</strong>.
-            Votre retour nous aide à perfectionner notre prise en charge.
+            Vos retours ont bien été transmis à la <strong>Maison de Santé Innov Care</strong>.
+            Ils nous aident à améliorer notre prise en charge.
           </p>
           <button
             className="btn-primary"
             onClick={() => {
               setSent(false);
-              setServices([]);
-              setRating(0);
-              setMessage('');
+              setServiceFeedbacks([]);
               setContactEmail('');
+              setError('');
             }}
           >
             Donner un autre avis
@@ -306,57 +391,76 @@ function FeedbackView() {
 
   return (
     <main className="patient-container anim-fade">
+      {showModal && (
+        <MultiServiceModal
+          initialFeedbacks={serviceFeedbacks}
+          onClose={() => setShowModal(false)}
+          onConfirm={handleModalConfirm}
+        />
+      )}
+
       <header className="patient-header">
         <Brand />
         <h1 className="patient-main-title">Votre avis compte pour nous</h1>
         <p className="patient-sub-title">
-          Partagez votre expérience en toute simplicité et confidentialité.
+          Notez chaque service que vous avez utilisé lors de votre passage.
         </p>
       </header>
 
       <form className="card patient-card" onSubmit={handleSubmit}>
         {error && <div className="error-alert">{error}</div>}
 
-        {/* 1. Sélection dynamique des services */}
-        <div className="form-group">
-          <label className="form-label">
-            1. Service(s) concerné(s)
-            <span className="form-hint">Ouvrez la liste pour cocher vos services</span>
-          </label>
-          <ServiceSelector
-            selectedServices={services}
-            onChange={setServices}
-          />
+        {/* Bouton d'ouverture du modal */}
+        <div className="open-modal-section">
+          {serviceFeedbacks.length === 0 ? (
+            <div className="open-modal-empty">
+              <p className="open-modal-hint">
+                Commencez par choisir et noter les services que vous avez utilisés
+              </p>
+              <button
+                type="button"
+                className="btn-open-modal"
+                onClick={() => setShowModal(true)}
+              >
+                <span className="btn-open-modal-icon">🏥</span>
+                <span>Choisir et noter mes services</span>
+              </button>
+            </div>
+          ) : (
+            <div className="services-summary-block">
+              <div className="services-summary-header">
+                <span className="services-summary-title">
+                  ✓ {serviceFeedbacks.length} service{serviceFeedbacks.length > 1 ? 's' : ''} évalué{serviceFeedbacks.length > 1 ? 's' : ''}
+                </span>
+                <button
+                  type="button"
+                  className="btn-edit-services"
+                  onClick={() => setShowModal(true)}
+                >
+                  ✏️ Modifier
+                </button>
+              </div>
+              <div className="services-rated-list">
+                {serviceFeedbacks.map((f, i) => (
+                  <div key={i} className="service-rated-row">
+                    <span className="srv-rated-name">{f.service}</span>
+                    <div className="srv-rated-stars">
+                      {[1, 2, 3, 4, 5].map(v => (
+                        <span key={v} style={{ color: v <= f.rating ? '#F5A623' : '#D1DDD9', fontSize: 16 }}>★</span>
+                      ))}
+                    </div>
+                    {f.comment && <span className="srv-rated-comment">"{f.comment}"</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* 2. Évaluation avec étoiles (vides par défaut) */}
-        <div className="form-group">
-          <label className="form-label">
-            2. Votre appréciation globale
-          </label>
-          <StarRatingInput value={rating} onChange={setRating} />
-        </div>
-
-        {/* 3. Message */}
-        <div className="form-group">
-          <label className="form-label" htmlFor="patient-message">
-            3. Vos remarques et commentaires
-          </label>
-          <textarea
-            id="patient-message"
-            className="form-textarea"
-            placeholder="Exprimez-vous librement sur l'accueil, les soins, la prise en charge, etc."
-            rows={4}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            required
-          />
-        </div>
-
-        {/* 4. Contact optionnel */}
-        <div className="form-group">
+        {/* Contact optionnel */}
+        <div className="form-group" style={{ marginTop: 20 }}>
           <label className="form-label" htmlFor="patient-contact">
-            4. Numéro de téléphone ou e-mail <span className="tag-optional">(Optionnel)</span>
+            Numéro de téléphone ou e-mail <span className="tag-optional">(Optionnel)</span>
           </label>
           <input
             id="patient-contact"
@@ -368,8 +472,23 @@ function FeedbackView() {
           />
         </div>
 
-        <button type="submit" className="btn-primary btn-submit" disabled={saving}>
-          {saving ? 'Envoi en cours...' : 'Envoyer mon avis'}
+        {/* Bouton envoi final */}
+        <button
+          type="submit"
+          className={`btn-submit-final ${serviceFeedbacks.length === 0 ? 'disabled-look' : ''}`}
+          disabled={saving || serviceFeedbacks.length === 0}
+        >
+          {saving ? (
+            <span>⏳ Envoi en cours...</span>
+          ) : (
+            <>
+              <span className="submit-final-icon">📨</span>
+              <span>Envoyer tous mes avis</span>
+              {serviceFeedbacks.length > 0 && (
+                <span className="submit-count-badge">{serviceFeedbacks.length}</span>
+              )}
+            </>
+          )}
         </button>
       </form>
     </main>
@@ -377,7 +496,7 @@ function FeedbackView() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ADMIN — Rôle : REGARDER UNIQUEMENT les messages qui viennent (Lecture seule)
+// ADMIN — Lecture seule
 // ═══════════════════════════════════════════════════════════════════════════════
 function AdminView() {
   const [username, setUsername] = useState('');
@@ -389,13 +508,10 @@ function AdminView() {
   const [showQrModal, setShowQrModal] = useState(false);
   const [qrUrlInput, setQrUrlInput] = useState('http://192.168.1.7:5173');
 
-  // Détection automatique de l'adresse réseau
   useEffect(() => {
     fetch(`${apiBase}/api/network-ip`)
       .then((r) => r.json())
-      .then((data) => {
-        if (data.url) setQrUrlInput(data.url);
-      })
+      .then((data) => { if (data.url) setQrUrlInput(data.url); })
       .catch(() => { });
   }, []);
 
@@ -436,9 +552,7 @@ function AdminView() {
   }
 
   useEffect(() => {
-    if (token) {
-      loadFeedbacks();
-    }
+    if (token) loadFeedbacks();
   }, [token]);
 
   async function handleLogin(e) {
@@ -466,9 +580,7 @@ function AdminView() {
   if (!token) {
     return (
       <main className="admin-container anim-fade">
-        <header className="patient-header">
-          <Brand />
-        </header>
+        <header className="patient-header"><Brand /></header>
         <div className="login-box card">
           <h2>Espace Administrateur</h2>
           <p className="login-desc">Accédez à la consultation des messages des patients</p>
@@ -476,25 +588,13 @@ function AdminView() {
           <form onSubmit={handleLogin}>
             <div className="form-group">
               <label className="form-label">Identifiant</label>
-              <input
-                type="text"
-                className="form-input"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="admin"
-                required
-                autoFocus
-              />
+              <input type="text" className="form-input" value={username}
+                onChange={(e) => setUsername(e.target.value)} placeholder="admin" required autoFocus />
             </div>
             <div className="form-group">
               <label className="form-label">Mot de passe</label>
-              <input
-                type="password"
-                className="form-input"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <input type="password" className="form-input" value={password}
+                onChange={(e) => setPassword(e.target.value)} required />
             </div>
             <button type="submit" className="btn-primary" style={{ marginTop: 12 }}>
               Consulter les messages
@@ -507,26 +607,19 @@ function AdminView() {
 
   return (
     <main className="admin-container anim-fade">
-      {/* En-tête Admin */}
       <header className="admin-simple-header">
         <Brand />
         <div className="admin-top-actions">
           <button className="btn-secondary" onClick={() => setShowQrModal(!showQrModal)}>
             {showQrModal ? 'Masquer QR Code' : '📲 QR Code à scanner'}
           </button>
-          <button
-            className="btn-logout"
-            onClick={() => {
-              localStorage.removeItem('innov_admin');
-              setToken('');
-            }}
-          >
+          <button className="btn-logout"
+            onClick={() => { localStorage.removeItem('innov_admin'); setToken(''); }}>
             Déconnexion
           </button>
         </div>
       </header>
 
-      {/* Panneau QR Code */}
       {showQrModal && (
         <section className="card qr-print-card anim-fade">
           <h2>QR Code pour les patients</h2>
@@ -538,12 +631,8 @@ function AdminView() {
           </div>
           <div className="qr-url-edit-box">
             <label>Lien encodé dans le QR Code :</label>
-            <input
-              type="text"
-              className="form-input"
-              value={qrUrlInput}
-              onChange={(e) => setQrUrlInput(e.target.value)}
-            />
+            <input type="text" className="form-input" value={qrUrlInput}
+              onChange={(e) => setQrUrlInput(e.target.value)} />
           </div>
           <button className="btn-primary" style={{ marginTop: 16 }} onClick={() => window.print()}>
             🖨 Imprimer l'affiche QR Code
@@ -551,7 +640,6 @@ function AdminView() {
         </section>
       )}
 
-      {/* Titre & Recherche */}
       <div className="messages-heading">
         <div>
           <h1 className="admin-title">Messages des patients</h1>
@@ -561,18 +649,13 @@ function AdminView() {
       </div>
 
       <div className="search-bar-wrap">
-        <input
-          type="text"
-          className="form-input search-input"
+        <input type="text" className="form-input search-input"
           placeholder="🔍 Rechercher par mot-clé, service ou contact..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+          value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
       </div>
 
       {error && <div className="error-alert">{error}</div>}
 
-      {/* Bannières / Cartes de messages élégantes */}
       <div className="feedbacks-list">
         {filteredFeedbacks.length === 0 ? (
           <div className="card empty-card">
@@ -581,7 +664,6 @@ function AdminView() {
         ) : (
           filteredFeedbacks.map((item) => (
             <article key={item.id} className="card modern-message-banner">
-              {/* Bannière d'en-tête du message */}
               <div className="banner-top-bar">
                 <div className="banner-service-tags">
                   {item.service
@@ -591,26 +673,17 @@ function AdminView() {
                     : <span className="service-banner-chip">Général</span>}
                 </div>
                 <div className="banner-date-badge">
-                  {new Date(item.created_at).toLocaleString('fr-FR', {
-                    dateStyle: 'medium',
-                    timeStyle: 'short',
-                  })}
+                  {new Date(item.created_at).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}
                 </div>
               </div>
-
-              {/* Étoiles d'évaluation */}
               <div className="banner-rating-row">
                 <StarDisplay rating={item.rating} />
               </div>
-
-              {/* Corps du message patient */}
               <div className="banner-message-body">
-                <span className="quote-icon">“</span>
-                <p className="banner-text">{item.message}</p>
-                <span className="quote-icon-end">”</span>
+                <span className="quote-icon">"</span>
+                <p className="banner-text">{item.message || <em>Aucun commentaire</em>}</p>
+                <span className="quote-icon-end">"</span>
               </div>
-
-              {/* Coordonnées si fournies */}
               {item.contact_email && (
                 <div className="banner-contact-badge">
                   ✉ <strong>Contact laissé :</strong> {item.contact_email}
@@ -625,7 +698,7 @@ function AdminView() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SUPER ADMIN — Rôle : GESTION COMPLÈTE & SUPPRESSION DES MESSAGES
+// SUPER ADMIN
 // ═══════════════════════════════════════════════════════════════════════════════
 function SuperAdminView() {
   const [password, setPassword] = useState('');
@@ -728,18 +801,13 @@ function SuperAdminView() {
         <header className="patient-header"><Brand /></header>
         <div className="login-box card">
           <h2>Super Administrateur</h2>
-          <p className="login-desc">Gestion avancée & suppression des messages</p>
+          <p className="login-desc">Gestion avancée &amp; suppression des messages</p>
           {error && <div className="error-alert">{error}</div>}
           <form onSubmit={login}>
             <div className="form-group">
               <label className="form-label">Mot de passe Super Admin</label>
-              <input
-                type="password"
-                className="form-input"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <input type="password" className="form-input" value={password}
+                onChange={(e) => setPassword(e.target.value)} required />
             </div>
             <button type="submit" className="btn-primary" style={{ marginTop: 12 }}>
               Ouvrir l'espace Super Admin
@@ -754,13 +822,8 @@ function SuperAdminView() {
     <main className="admin-container anim-fade">
       <header className="admin-simple-header">
         <Brand />
-        <button
-          className="btn-logout"
-          onClick={() => {
-            localStorage.removeItem('innov_super_admin');
-            setToken('');
-          }}
-        >
+        <button className="btn-logout"
+          onClick={() => { localStorage.removeItem('innov_super_admin'); setToken(''); }}>
           Déconnexion Super Admin
         </button>
       </header>
@@ -775,55 +838,30 @@ function SuperAdminView() {
 
       {error && <div className="error-alert">{error}</div>}
 
-      {/* Gestion des comptes admin */}
       <div className="card" style={{ marginBottom: 30 }}>
         <h3 style={{ color: 'var(--primary-teal)', marginBottom: 12 }}>Créer un compte d'accès responsable</h3>
         <form onSubmit={createUser} className="user-create-form">
-          <input
-            className="form-input"
-            placeholder="Identifiant (ex: reception)"
+          <input className="form-input" placeholder="Identifiant (ex: reception)"
             value={newUser.username}
-            onChange={(e) => setNewUser((u) => ({ ...u, username: e.target.value }))}
-            required
-          />
-          <input
-            className="form-input"
-            placeholder="Nom complet"
+            onChange={(e) => setNewUser((u) => ({ ...u, username: e.target.value }))} required />
+          <input className="form-input" placeholder="Nom complet"
             value={newUser.displayName}
-            onChange={(e) => setNewUser((u) => ({ ...u, displayName: e.target.value }))}
-            required
-          />
-          <input
-            className="form-input"
-            type="password"
-            placeholder="Mot de passe (10 car. min)"
+            onChange={(e) => setNewUser((u) => ({ ...u, displayName: e.target.value }))} required />
+          <input className="form-input" type="password" placeholder="Mot de passe (10 car. min)"
             value={newUser.password}
-            onChange={(e) => setNewUser((u) => ({ ...u, password: e.target.value }))}
-            required
-          />
-          <button type="submit" className="btn-primary" style={{ width: 'auto' }}>
-            + Ajouter
-          </button>
+            onChange={(e) => setNewUser((u) => ({ ...u, password: e.target.value }))} required />
+          <button type="submit" className="btn-primary" style={{ width: 'auto' }}>+ Ajouter</button>
         </form>
-
         <div style={{ marginTop: 16 }}>
           {users.map((u) => (
             <div key={u.id} className="user-item-row">
-              <div>
-                <strong>{u.display_name}</strong> <small>({u.username})</small>
-              </div>
-              <button
-                className="btn-delete-msg"
-                onClick={() => deleteUser(u.id)}
-              >
-                Supprimer le compte
-              </button>
+              <div><strong>{u.display_name}</strong> <small>({u.username})</small></div>
+              <button className="btn-delete-msg" onClick={() => deleteUser(u.id)}>Supprimer le compte</button>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Liste des avis avec bouton SUPPRIMER fonctionnel */}
       <h2 style={{ fontSize: 20, color: 'var(--primary-teal)', marginBottom: 16 }}>
         Tous les avis reçus ({feedbacks.length})
       </h2>
@@ -842,28 +880,19 @@ function SuperAdminView() {
                 {new Date(item.created_at).toLocaleString('fr-FR')}
               </div>
             </div>
-
-            <div className="banner-rating-row">
-              <StarDisplay rating={item.rating} />
-            </div>
-
+            <div className="banner-rating-row"><StarDisplay rating={item.rating} /></div>
             <div className="banner-message-body">
-              <p className="banner-text">{item.message}</p>
+              <p className="banner-text">{item.message || <em>Aucun commentaire</em>}</p>
             </div>
-
             {item.contact_email && (
               <div className="banner-contact-badge">
                 ✉ <strong>Contact :</strong> {item.contact_email}
               </div>
             )}
-
             <div className="banner-footer-actions">
-              <button
-                type="button"
-                className="btn-delete-action"
+              <button type="button" className="btn-delete-action"
                 disabled={deletingId === item.id}
-                onClick={() => handleDeleteFeedback(item.id)}
-              >
+                onClick={() => handleDeleteFeedback(item.id)}>
                 {deletingId === item.id ? 'Suppression...' : '🗑 Supprimer définitivement cet avis'}
               </button>
             </div>

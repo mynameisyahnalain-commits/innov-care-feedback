@@ -33,6 +33,7 @@ const pool = mysql.createPool({
 });
 
 let usersTableReady;
+let feedbacksTableReady;
 
 async function ensureUsersTable() {
   if (!usersTableReady) {
@@ -54,6 +55,56 @@ async function ensureUsersTable() {
     });
   }
   await usersTableReady;
+}
+
+async function ensureFeedbacksTable() {
+  if (!feedbacksTableReady) {
+    feedbacksTableReady = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS feedbacks (
+          id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+          message TEXT NOT NULL,
+          rating TINYINT UNSIGNED NULL,
+          service VARCHAR(250) NULL,
+          status ENUM('new', 'in_review', 'resolved') NOT NULL DEFAULT 'new',
+          admin_note TEXT NULL,
+          contact_email VARCHAR(200) NULL,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          PRIMARY KEY (id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+
+      const [columnRows] = await pool.query(`
+        SELECT COLUMN_NAME
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'feedbacks'
+      `);
+      const columns = new Set(columnRows.map(({ COLUMN_NAME }) => COLUMN_NAME));
+      const additions = [
+        ['status', "ADD COLUMN status ENUM('new', 'in_review', 'resolved') NOT NULL DEFAULT 'new'"],
+        ['admin_note', 'ADD COLUMN admin_note TEXT NULL'],
+        ['contact_email', 'ADD COLUMN contact_email VARCHAR(200) NULL'],
+        ['created_at', 'ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP'],
+        ['updated_at', 'ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'],
+      ];
+
+      for (const [column, statement] of additions) {
+        if (!columns.has(column)) await pool.query(`ALTER TABLE feedbacks ${statement}`);
+      }
+
+      if (columns.has('service')) {
+        await pool.query('ALTER TABLE feedbacks MODIFY COLUMN service VARCHAR(250) NULL');
+      }
+      if (columns.has('rating')) {
+        await pool.query('ALTER TABLE feedbacks MODIFY COLUMN rating TINYINT UNSIGNED NULL');
+      }
+    })().catch((error) => {
+      feedbacksTableReady = null;
+      throw error;
+    });
+  }
+  await feedbacksTableReady;
 }
 
 app.use(cors());
@@ -83,6 +134,7 @@ app.get('/api/health', async (_req, res) => {
   try {
     await pool.query('SELECT 1');
     await ensureUsersTable();
+    await ensureFeedbacksTable();
 
     res.json({
       ok: true,
@@ -146,7 +198,10 @@ app.post('/api/feedbacks/batch', async (req, res) => {
     } finally {
       conn.release();
     }
-  } catch { res.status(500).json({ message: "Impossible d'enregistrer les avis." }); }
+  } catch (error) {
+    console.error("Erreur lors de l'enregistrement des avis:", error);
+    res.status(500).json({ message: "Impossible d'enregistrer les avis." });
+  }
 });
 
 // ─── Soumission d'un avis patient (endpoint simple, rétrocompat) ─────────────
@@ -237,7 +292,10 @@ app.get('/api/admin/feedbacks', checkAdmin, async (req, res) => {
   try {
     const [rows] = await pool.execute(query, params);
     res.json(rows);
-  } catch { res.status(500).json({ message: 'Impossible de charger les avis.' }); }
+  } catch (error) {
+    console.error('Erreur lors du chargement des avis:', error);
+    res.status(500).json({ message: 'Impossible de charger les avis.' });
+  }
 });
 
 // Statistiques pour le dashboard admin

@@ -451,35 +451,25 @@ function FeedbackView() {
         <fieldset className="feedback-choice" disabled={saving}>
           <legend>Comment souhaitez-vous nous faire part de votre expérience ?</legend>
           <div className="feedback-options">
-            <label className={`feedback-option ${mode === 'services' ? 'is-selected' : ''}`}>
-              <input type="radio" name="feedback-mode" value="services" checked={mode === 'services'} onChange={() => { setMode('services'); setError(''); }} />
-              <span><strong>Évaluer un service</strong><small>Donnez une note aux services visités.</small></span>
-            </label>
-            <label className={`feedback-option ${mode === 'complaint' ? 'is-selected' : ''}`}>
-              <input type="radio" name="feedback-mode" value="complaint" checked={mode === 'complaint'} onChange={() => { setMode('complaint'); setError(''); }} />
+            <button type="button" className={`feedback-option option-services ${mode === 'services' ? 'is-selected' : ''}`}
+              aria-pressed={mode === 'services'} aria-haspopup="dialog"
+              onClick={() => { setMode('services'); setError(''); setShowModal(true); }}>
+              <span className="option-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"><path d="m12 3 2.8 5.7 6.3.9-4.6 4.4 1.1 6.3-5.6-3-5.6 3 1.1-6.3L3 9.6l6.2-.9Z" /></svg></span>
+              <span><strong>Évaluer un service</strong><small>Choisissez vos services et donnez votre note.</small><span className="option-action">Évaluer maintenant <span aria-hidden="true">→</span></span></span>
+            </button>
+            <button type="button" className={`feedback-option option-complaint ${mode === 'complaint' ? 'is-selected' : ''}`}
+              aria-pressed={mode === 'complaint'} onClick={() => { setMode('complaint'); setError(''); }}>
+              <span className="option-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 15a3 3 0 0 1-3 3H9l-5 3V6a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3Z" /><path d="M8 8h8M8 12h5" /></svg></span>
               <span><strong>Faire une réclamation</strong><small>Écrivez librement, sans choisir de service.</small></span>
-            </label>
+            </button>
           </div>
         </fieldset>
         {error && <div className="error-alert" role="alert">{error}</div>}
 
-        {/* Bouton d'ouverture du modal */}
+        {/* Récapitulatif des services évalués */}
         {mode === 'services' ? (
         <div className="open-modal-section">
-          {serviceFeedbacks.length === 0 ? (
-            <div className="open-modal-empty">
-              <p className="open-modal-hint">
-                Commencez par choisir et noter les services que vous avez utilisés
-              </p>
-              <button
-                type="button"
-                className="btn-open-modal"
-                onClick={() => setShowModal(true)}
-              >
-                <span>Choisir et noter mes services</span>
-              </button>
-            </div>
-          ) : (
+          {serviceFeedbacks.length > 0 && (
             <div className="services-summary-block">
               <div className="services-summary-header">
                 <span className="services-summary-title">

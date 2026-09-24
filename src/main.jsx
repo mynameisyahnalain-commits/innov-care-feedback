@@ -392,8 +392,8 @@ function FeedbackView() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (mode === 'complaint' && complaint.trim().length < 10) {
-      setError('Décrivez votre situation en au moins 10 caractères.');
+    if (mode === 'complaint' && !complaint.trim()) {
+      setError('Écrivez votre message avant de l’envoyer.');
       return;
     }
     if (mode === 'services' && serviceFeedbacks.length === 0) {
@@ -551,9 +551,8 @@ function FeedbackView() {
             <p className="field-help" id="complaint-help">Décrivez votre difficulté ou ce que vous souhaitez nous signaler. Aucune note n’est nécessaire.</p>
             <textarea id="patient-complaint" className="form-textarea" rows={5}
               placeholder="Expliquez-nous votre situation…" value={complaint}
-              onChange={e => setComplaint(e.target.value)} minLength={10} maxLength={5000}
+              onChange={e => setComplaint(e.target.value)} maxLength={5000}
               required aria-describedby="complaint-help" />
-            <p className="field-help">10 caractères minimum</p>
           </div>
         )}
 

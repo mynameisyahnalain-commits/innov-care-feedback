@@ -95,8 +95,8 @@ app.post('/api/feedbacks/batch', async (req, res) => {
       return res.status(422).json({ message: `Note invalide pour le service "${cleanService}".` });
     if (cleanMessage.length > 5000)
       return res.status(422).json({ message: `Commentaire trop long pour "${cleanService}".` });
-    if (isGeneral && cleanMessage.length < 10)
-      return res.status(422).json({ message: 'Décrivez votre situation en au moins 10 caractères.' });
+    if (isGeneral && !cleanMessage)
+      return res.status(422).json({ message: 'Écrivez votre message avant de l’envoyer.' });
 
     rows.push([cleanMessage, numericRating, cleanService || null, cleanEmail]);
   }
@@ -135,8 +135,8 @@ app.post('/api/feedbacks', async (req, res) => {
   const numericRating = Number(rating);
   const cleanEmail = typeof contact_email === 'string' && contact_email.trim() ? contact_email.trim() : null;
 
-  if (cleanMessage.length < 10 || cleanMessage.length > 5000)
-    return res.status(422).json({ message: 'Le message doit contenir entre 10 et 5000 caractères.' });
+  if (!cleanMessage || cleanMessage.length > 5000)
+    return res.status(422).json({ message: 'Le message est obligatoire et ne doit pas dépasser 5000 caractères.' });
   if (!selectedServices.length || selectedServices.length > 10 || cleanServices.length > 250)
     return res.status(422).json({ message: 'Sélectionnez entre 1 et 10 services.' });
   if (!Number.isInteger(numericRating) || numericRating < 1 || numericRating > 5)

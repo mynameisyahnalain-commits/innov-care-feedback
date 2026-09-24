@@ -48,7 +48,9 @@ test('Express and Netlify accept free complaints and preserve service rating val
       assert.equal(await send([{ service: null, rating: null, message: '  Une réclamation générale.  ' }]), 201, name);
       assert.deepEqual(rows, [['Une réclamation générale.', null, null, null]], name);
       assert.ok(committed && released, name);
-      assert.equal(await send([{ message: 'court' }]), 422, name);
+      assert.equal(await send([{ message: 'ok' }]), 201, name);
+      assert.equal(await send([{ message: 'a' }]), 201, name);
+      assert.equal(await send([{ message: '' }]), 422, name);
       assert.equal(await send([{ message: ' '.repeat(20) }]), 422, name);
       assert.equal(await send([{ message: 'a'.repeat(5001) }]), 422, name);
       assert.equal(await send([{ service: 'Accueil', message: '', rating: null }]), 422, name);

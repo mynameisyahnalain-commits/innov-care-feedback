@@ -90,8 +90,8 @@ export default async function handler(event) {
           return json(422, { message: 'Service, commentaire ou contact invalide.' });
         if (!isGeneral && (!Number.isInteger(rating) || rating < 1 || rating > 5))
           return json(422, { message: 'La note doit être comprise entre 1 et 5.' });
-        if (isGeneral && message.length < 10)
-          return json(422, { message: 'Décrivez votre situation en au moins 10 caractères.' });
+        if (isGeneral && !message)
+          return json(422, { message: 'Écrivez votre message avant de l’envoyer.' });
         rows.push([message, rating, service || null, contact]);
       }
       const conn = await database.getConnection();
@@ -117,7 +117,7 @@ export default async function handler(event) {
       const selectedServices = Array.isArray(body.services) ? [...new Set(body.services.filter(item => typeof item === 'string').map(item => item.trim()).filter(Boolean))] : (typeof body.service === 'string' && body.service.trim() ? [body.service.trim()] : []);
       const cleanServices = selectedServices.join(', ');
       const numericRating = Number(body.rating);
-      if (cleanMessage.length < 10 || cleanMessage.length > 5000) return json(422, { message: 'Le message doit contenir entre 10 et 5000 caractères.' });
+      if (!cleanMessage || cleanMessage.length > 5000) return json(422, { message: 'Le message est obligatoire et ne doit pas dépasser 5000 caractères.' });
       if (!selectedServices.length || selectedServices.length > 10 || cleanServices.length > 250) return json(422, { message: 'Sélectionnez entre 1 et 10 services.' });
       if (!Number.isInteger(numericRating) || numericRating < 1 || numericRating > 5) return json(422, { message: 'La note doit être comprise entre 1 et 5.' });
       const [result] = await database.execute('INSERT INTO feedbacks (message, rating, service) VALUES (?, ?, ?)', [cleanMessage, numericRating, cleanServices]);

@@ -1446,3 +1446,37 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
   .msm-service-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 16px; gap: 12px; }
   .msm-header { padding-top: 54px; }
 }
+
+/* Deux actions compactes, côte à côte sur toutes les tailles d’écran. */
+.feedback-options { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.feedback-option { min-width: 0; min-height: 112px; padding: 16px 10px; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; border-radius: 6px; border-width: 1px; }
+.feedback-option.option-services, .feedback-option.option-services.is-selected,
+.feedback-option.option-complaint, .feedback-option.option-complaint.is-selected { box-shadow: 0 2px 4px #123c2920; }
+.feedback-option .option-icon { width: 32px; height: 32px; background: transparent; border-radius: 0; }
+.feedback-option .option-icon svg { width: 30px; height: 30px; }
+.feedback-option strong { font-size: 16px; line-height: 1.35; }
+.feedback-option:hover:not(:disabled) { transform: none; filter: brightness(1.08); }
+.feedback-option:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
+@media (max-width: 380px) {
+  .feedback-options { gap: 8px; }
+  .feedback-option { padding: 14px 8px; }
+  .feedback-option strong { font-size: 14px; }
+}
+
+/* Choix des services sous forme de boutons compacts à pictogramme. */
+.msm-service-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.msm-service-tile { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: 6px 10px; border-radius: 7px; padding: 14px 12px; border: 1px solid #aebfb7; border-bottom: 3px solid #91aa9d; box-shadow: 0 2px 3px #123c2914; text-align: left; }
+.msm-service-tile .service-symbol { grid-row: 1 / 4; width: 42px; height: 42px; border-radius: 50%; }
+.msm-service-tile .service-symbol svg { width: 27px; height: 27px; }
+.msm-tile-label { justify-content: flex-start; text-align: left; min-height: 0; font-size: 14px; }
+.service-tile-action, .msm-tile-rated-stars { grid-column: 2; margin: 0; }
+.feedback-final-step { scroll-margin-top: 20px; }
+.send-reminder { background: #fff3db; border-left: 4px solid #b77c27; padding: 14px 16px; margin-bottom: 16px; color: #674714; }
+.send-reminder strong { display: block; font-size: 17px; }
+.send-reminder p { margin-top: 5px; font-size: 14px; line-height: 1.5; }
+@media (max-width: 380px) {
+  .msm-service-tile { grid-template-columns: 1fr; justify-items: center; padding: 12px 8px; }
+  .msm-service-tile .service-symbol { grid-row: auto; }
+  .msm-tile-label { text-align: center; justify-content: center; }
+  .service-tile-action, .msm-tile-rated-stars { grid-column: 1; }
+}

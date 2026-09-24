@@ -1,10 +1,13 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import mysql from 'mysql2/promise';
 import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 import os from 'node:os';
+
+// Match Vite's local configuration without replacing hosting environment variables.
+dotenv.config({ path: process.env.NODE_ENV === 'production' ? '.env' : ['.env.local', '.env'], quiet: true });
 
 const app = express();
 const port = Number(process.env.PORT || process.env.API_PORT || 3010);
@@ -149,6 +152,7 @@ app.post('/api/feedbacks', async (req, res) => {
     res.status(201).json({ id: result.insertId, message: 'Avis enregistré.' });
   } catch { res.status(500).json({ message: 'Impossible d\'enregistrer votre avis.' }); }
 });
+
 
 // ─── Authentification ────────────────────────────────────────────────────────
 function readCredentials(req) {

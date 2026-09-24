@@ -277,7 +277,7 @@ function MultiServiceModal({ onClose, onConfirm, initialFeedbacks }) {
           <p className="msm-subtitle">
             {ratedIds.length === 0
               ? 'Appuyez sur un service pour le noter'
-              : `${ratedIds.length} service${ratedIds.length > 1 ? 's notés' : ' noté'} — choisissez-en un autre ou terminez`}
+              : `${ratedIds.length} service${ratedIds.length > 1 ? 's notés' : ' noté'} — ajoutez un service ou passez à l’envoi.`}
           </p>
           <button className="msm-close" onClick={onClose} aria-label="Fermer">✕</button>
         </div>
@@ -316,7 +316,7 @@ function MultiServiceModal({ onClose, onConfirm, initialFeedbacks }) {
               className="btn-primary msm-cta"
               onClick={handleConfirm}
             >
-              ✓ Terminer ({ratedIds.length} avis)
+              Continuer vers l’envoi →
             </button>
           ) : (
             <p className="msm-footer-hint">Sélectionnez un service pour commencer</p>
@@ -340,6 +340,17 @@ function FeedbackView() {
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [sent, setSent] = useState(false);
+  const summaryRef = useRef(null);
+  const focusSummary = useRef(false);
+  useEffect(() => {
+    if (showModal || !focusSummary.current) return;
+    focusSummary.current = false;
+    const frame = requestAnimationFrame(() => {
+      summaryRef.current?.focus({ preventScroll: true });
+      summaryRef.current?.scrollIntoView({ block: 'start' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [showModal]);
   const [error, setError] = useState('');
 
   // Synchronisation hors-ligne
@@ -369,6 +380,7 @@ function FeedbackView() {
   }, []);
 
   function handleModalConfirm(entries) {
+    focusSummary.current = true;
     setServiceFeedbacks(entries);
     setShowModal(false);
   }
@@ -477,13 +489,13 @@ function FeedbackView() {
             <button type="button" className={`feedback-option option-services ${mode === 'services' ? 'is-selected' : ''}`}
               aria-pressed={mode === 'services'} aria-haspopup="dialog"
               onClick={() => { setMode('services'); setError(''); setShowModal(true); }}>
-              <span className="option-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"><path d="m12 3 2.8 5.7 6.3.9-4.6 4.4 1.1 6.3-5.6-3-5.6 3 1.1-6.3L3 9.6l6.2-.9Z" /></svg></span>
-              <span><strong>Évaluer un service</strong><small>Choisissez vos services et donnez votre note.</small><span className="option-action">Évaluer maintenant <span aria-hidden="true">→</span></span></span>
+              <span className="option-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{SERVICE_SYMBOLS.consultation}</svg></span>
+              <strong>Évaluer un service</strong>
             </button>
             <button type="button" className={`feedback-option option-complaint ${mode === 'complaint' ? 'is-selected' : ''}`}
               aria-pressed={mode === 'complaint'} onClick={() => { setMode('complaint'); setError(''); }}>
               <span className="option-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 15a3 3 0 0 1-3 3H9l-5 3V6a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3Z" /><path d="M8 8h8M8 12h5" /></svg></span>
-              <span><strong>Faire une réclamation</strong><small>Écrivez librement, sans choisir de service.</small><span className="option-action">Écrire mon message <span aria-hidden="true">→</span></span></span>
+              <strong>Faire une réclamation</strong>
             </button>
           </div>
         </fieldset>
@@ -493,6 +505,11 @@ function FeedbackView() {
         {mode === 'services' ? (
         <div className="open-modal-section">
           {serviceFeedbacks.length > 0 && (
+            <div ref={summaryRef} tabIndex={-1} className="feedback-final-step">
+              <div className="send-reminder" role="status">
+                <strong>Dernière étape : envoyez votre avis</strong>
+                <p>Vos notes ne sont pas encore envoyées. Vérifiez-les, puis appuyez sur « Envoyer mon avis » en bas.</p>
+              </div>
             <div className="services-summary-block">
               <div className="services-summary-header">
                 <span className="services-summary-title">
@@ -520,6 +537,7 @@ function FeedbackView() {
                 ))}
               </div>
             </div>
+            </div>
           )}
         </div>
         ) : (
@@ -530,7 +548,7 @@ function FeedbackView() {
               placeholder="Expliquez-nous votre situation…" value={complaint}
               onChange={e => setComplaint(e.target.value)} minLength={10} maxLength={5000}
               required aria-describedby="complaint-help" />
-            <p className="field-help">10 caractères minimum · {complaint.length}/5 000</p>
+            <p className="field-help">10 caractères minimum</p>
           </div>
         )}
 

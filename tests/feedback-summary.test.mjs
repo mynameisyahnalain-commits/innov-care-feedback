@@ -30,3 +30,12 @@ test('old and current names share the same service average', () => {
   assert.equal(groups.length, 1);
   assert.equal(groups[0].average, 4);
 });
+test('retired services are excluded without dropping other services on historical feedback', () => {
+  const groups = summarizeFeedbacks([
+    { service: 'Laboratoire / Analyses, Soins', rating: 4 },
+    { service: 'Pharmacie, Accueil', rating: 5 },
+    { service: 'Laboratoire', rating: 1 },
+    { service: 'Pharmacie', rating: 2 },
+  ]);
+  assert.deepEqual(groups.map(g => [g.service, g.average]), [['Accueil & Réception', 5], ['Soins & Infirmerie', 4]]);
+});

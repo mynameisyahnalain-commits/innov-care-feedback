@@ -10,6 +10,8 @@ export function summarizeFeedbacks(feedbacks) {
     const rating = feedback.rating == null || feedback.rating === '' ? null : Number(feedback.rating);
     const validRating = Number.isInteger(rating) && rating >= 1 && rating <= 5;
     for (const service of feedbackServices(feedback)) {
+      // Historical feedback remains readable, but these services are not offered to patients.
+      if (/^(laboratoire|pharmacie)(\s|\/|$)/i.test(service)) continue;
       const group = groups.get(service) || { service, count: 0, comments: 0, rated: 0, total: 0 };
       group.count++;
       if (String(feedback.message || '').trim()) group.comments++;

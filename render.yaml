@@ -4,6 +4,7 @@ services:
     env: node
     buildCommand: npm install && npm run build
     startCommand: node server.mjs
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
@@ -11,3 +12,5 @@ services:
         value: innov-care-2026
       - key: SUPER_ADMIN_PASSWORD
         value: innov-super-2026
+      - key: DB_STORAGE_LIMIT_BYTES
+        value: "8589934592"

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
-import { feedbackServices, summarizeFeedbacks } from './feedback-summary.mjs';
+import { feedbackServices } from './feedback-summary.mjs';
 
 const LOGO_SRC = '/logo.png';
 const apiBase = import.meta.env.VITE_API_BASE_URL || '';
@@ -53,6 +53,18 @@ function Brand() {
     <div className="brand">
       <img className="brand-logo-full" src={LOGO_SRC} alt="Maison de Santé Innov Care" />
     </div>
+  );
+}
+
+function Pagination({ pagination, onPageChange }) {
+  if (!pagination || pagination.totalPages <= 1) return null;
+  const { page, totalPages, total } = pagination;
+  return (
+    <nav className="pagination" aria-label="Navigation des avis">
+      <button type="button" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>← Précédent</button>
+      <span>Page <strong>{page}</strong> sur <strong>{totalPages}</strong> · {total} avis</span>
+      <button type="button" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>Suivant →</button>
+    </nav>
   );
 }
 
@@ -604,6 +616,9 @@ function AdminView() {
   const [password, setPassword] = useState('');
   const [token, setToken] = useState(localStorage.getItem('innov_admin') || '');
   const [feedbacks, setFeedbacks] = useState([]);
+  const [stats, setStats] = useState({ total: 0, byService: [] });
+  const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 1 });
+  const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showQrModal, setShowQrModal] = useState(false);
@@ -638,10 +653,15 @@ function AdminView() {
     return r.json();
   }
 
-  async function loadFeedbacks(tok = token) {
+  async function loadFeedbacks(tok = token, page = pagination.page, service = selectedService, search = searchTerm) {
     try {
-      const data = await apiFetch('/api/admin/feedbacks', {}, tok);
-      setFeedbacks(data);
+      setLoadingFeedbacks(true);
+      const params = new URLSearchParams({ page: String(page), limit: '50' });
+      if (service) params.set('service', service);
+      if (search.trim()) params.set('search', search.trim());
+      const data = await apiFetch(`/api/admin/feedbacks?${params}`, {}, tok);
+      setFeedbacks(data.items);
+      setPagination(data.pagination);
       setError('');
     } catch (err) {
       setError(err.message);
@@ -649,18 +669,34 @@ function AdminView() {
         setToken('');
         localStorage.removeItem('innov_admin');
       }
+      throw err;
+    } finally {
+      setLoadingFeedbacks(false);
     }
   }
 
+  async function loadStats(tok = token) {
+    const data = await apiFetch('/api/admin/stats', {}, tok);
+    setStats(data);
+  }
+
   useEffect(() => {
-    if (token) loadFeedbacks();
+    if (!token) return undefined;
+    const timer = window.setTimeout(() => {
+      loadFeedbacks(token, pagination.page, selectedService, searchTerm).catch(() => {});
+    }, searchTerm ? 350 : 0);
+    return () => window.clearTimeout(timer);
+  }, [token, pagination.page, selectedService, searchTerm]);
+
+  useEffect(() => {
+    if (token) loadStats().catch((err) => setError(err.message));
   }, [token]);
 
   async function handleLogin(e) {
     e.preventDefault();
     const creds = encodeCredentials(username.trim().toLowerCase() || 'admin', password);
     try {
-      await loadFeedbacks(creds);
+      await Promise.all([loadFeedbacks(creds, 1, '', ''), loadStats(creds)]);
       localStorage.setItem('innov_admin', creds);
       setToken(creds);
     } catch (err) {
@@ -668,27 +704,21 @@ function AdminView() {
     }
   }
 
-  const receivedSummaries = summarizeFeedbacks(feedbacks);
+  const receivedSummaries = (stats.byService || []).map((row) => ({
+    service: row.service || 'Réclamation générale',
+    count: Number(row.count || 0),
+    comments: Number(row.comments || 0),
+    rated: Number(row.rated || 0),
+    average: row.avg_rating == null ? null : Number(row.avg_rating),
+  }));
   const serviceSummaries = ALL_SERVICES.map(service => receivedSummaries.find(s => s.service === service.label)
     || { service: service.label, count: 0, comments: 0, rated: 0, average: null });
   // Keep general and legacy combined feedback accessible without inventing separate ratings.
   serviceSummaries.push(...receivedSummaries.filter(s => !ALL_SERVICES.some(service => service.label === s.service)));
-  const filteredFeedbacks = feedbacks.filter((f) => {
-    const visibleServices = feedbackServices(f);
-    if (!visibleServices.length) return false;
-    if (selectedService && !visibleServices.includes(selectedService)) return false;
-    if (!searchTerm.trim()) return true;
-    const q = searchTerm.toLowerCase();
-    return (
-      (f.message && f.message.toLowerCase().includes(q)) ||
-      (f.service && f.service.toLowerCase().includes(q)) ||
-      (f.contact_email && f.contact_email.toLowerCase().includes(q))
-    );
-  });
-
   function showServiceReviews(service) {
     setSelectedService(service);
     setSearchTerm('');
+    setPagination((current) => ({ ...current, page: 1 }));
     requestAnimationFrame(() => requestAnimationFrame(() => {
       reviewsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       reviewsRef.current?.focus({ preventScroll: true });
@@ -698,6 +728,7 @@ function AdminView() {
   function showAllReviews() {
     setSelectedService('');
     setSearchTerm('');
+    setPagination((current) => ({ ...current, page: 1 }));
     requestAnimationFrame(() => requestAnimationFrame(() => {
       reviewsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       reviewsRef.current?.focus({ preventScroll: true });
@@ -772,7 +803,7 @@ function AdminView() {
           <h1 className="admin-title">Messages des patients</h1>
           <p className="admin-subtitle">Consultez les remarques et retours d'expérience reçus</p>
         </div>
-        <div className="badge-count-total">{feedbacks.length} avis reçu(s)</div>
+        <div className="badge-count-total">{stats.total} avis reçu(s)</div>
       </div>
 
       {serviceSummaries.length > 0 && (
@@ -807,23 +838,28 @@ function AdminView() {
 
       <div ref={reviewsRef} tabIndex={-1} className="review-list-heading">
         <div><span className="section-kicker">Avis patients</span><h2>{selectedService || 'Tous les avis'}</h2></div>
-        <span>{filteredFeedbacks.length} résultat{filteredFeedbacks.length > 1 ? 's' : ''}</span>
+        <span>{pagination.total} résultat{pagination.total > 1 ? 's' : ''}</span>
       </div>
       <div className="search-bar-wrap">
         <input type="text" className="form-input search-input"
           placeholder=" Rechercher par mot-clé, service ou contact..."
-          value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          value={searchTerm} onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setPagination((current) => ({ ...current, page: 1 }));
+          }} />
       </div>
 
       {error && <div className="error-alert">{error}</div>}
 
       <div className="feedbacks-list">
-        {filteredFeedbacks.length === 0 ? (
+        {loadingFeedbacks ? (
+          <div className="card empty-card">Chargement des avis...</div>
+        ) : feedbacks.length === 0 ? (
           <div className="card empty-card">
             {searchTerm || selectedService ? 'Aucun message ne correspond à votre sélection.' : 'Aucun message reçu pour le moment.'}
           </div>
         ) : (
-          filteredFeedbacks.map((item) => (
+          feedbacks.map((item) => (
             <article key={item.id} className="patient-review">
               <header className="review-header">
                 <strong>{feedbackServices(item).join(' · ')}</strong>
@@ -844,6 +880,10 @@ function AdminView() {
           ))
         )}
       </div>
+      <Pagination pagination={pagination} onPageChange={(page) => {
+        setPagination((current) => ({ ...current, page }));
+        reviewsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }} />
     </main>
   );
 }
@@ -855,6 +895,12 @@ function SuperAdminView() {
   const [password, setPassword] = useState('');
   const [token, setToken] = useState(localStorage.getItem('innov_super_admin') || '');
   const [feedbacks, setFeedbacks] = useState([]);
+  const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 1 });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [archiveView, setArchiveView] = useState('active');
+  const [overview, setOverview] = useState({ total: 0, archived: 0, storage: null });
+  const [archiveYear, setArchiveYear] = useState(new Date().getFullYear() - 1);
+  const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
   const [users, setUsers] = useState([]);
   const [newUser, setNewUser] = useState({ username: '', displayName: '', password: '' });
   const [error, setError] = useState('');
@@ -879,24 +925,49 @@ function SuperAdminView() {
     return data;
   }
 
-  async function load(tok = token) {
-    const [fb, us] = await Promise.all([
-      req('/api/super-admin/feedbacks', {}, tok),
+  async function loadFeedbacks(tok = token, page = pagination.page, search = searchTerm, archived = archiveView) {
+    setLoadingFeedbacks(true);
+    try {
+      const params = new URLSearchParams({ page: String(page), limit: '50', archived });
+      if (search.trim()) params.set('search', search.trim());
+      const data = await req(`/api/super-admin/feedbacks?${params}`, {}, tok);
+      setFeedbacks(data.items);
+      setPagination(data.pagination);
+    } finally {
+      setLoadingFeedbacks(false);
+    }
+  }
+
+  async function loadMeta(tok = token) {
+    const [us, systemOverview] = await Promise.all([
       req('/api/super-admin/users', {}, tok),
+      req('/api/super-admin/overview', {}, tok),
     ]);
-    setFeedbacks(fb);
     setUsers(us);
+    setOverview(systemOverview);
+  }
+
+  async function load(tok = token) {
+    await Promise.all([loadFeedbacks(tok, 1, '', 'active'), loadMeta(tok)]);
   }
 
   useEffect(() => {
-    if (token) {
-      load().catch((err) => {
-        setError(err.message);
-        setToken('');
-        localStorage.removeItem('innov_super_admin');
-      });
-    }
-  }, []);
+    if (!token) return undefined;
+    loadMeta().catch((err) => {
+      setError(err.message);
+      setToken('');
+      localStorage.removeItem('innov_super_admin');
+    });
+    return undefined;
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return undefined;
+    const timer = window.setTimeout(() => {
+      loadFeedbacks(token, pagination.page, searchTerm, archiveView).catch((err) => setError(err.message));
+    }, searchTerm ? 350 : 0);
+    return () => window.clearTimeout(timer);
+  }, [token, pagination.page, searchTerm, archiveView]);
 
   async function login(e) {
     e.preventDefault();
@@ -915,7 +986,7 @@ function SuperAdminView() {
     setDeletingId(id);
     try {
       await req(`/api/super-admin/feedbacks/${id}`, { method: 'DELETE' });
-      setFeedbacks((prev) => prev.filter((f) => f.id !== id));
+      await Promise.all([loadFeedbacks(), loadMeta()]);
       setError('');
     } catch (err) {
       setError(err.message || 'Erreur lors de la suppression.');
@@ -929,7 +1000,7 @@ function SuperAdminView() {
     try {
       await req('/api/super-admin/users', { method: 'POST', body: JSON.stringify(newUser) });
       setNewUser({ username: '', displayName: '', password: '' });
-      await load();
+      await loadMeta();
       setError('');
     } catch (err) {
       setError(err.message);
@@ -940,7 +1011,43 @@ function SuperAdminView() {
     if (!window.confirm('Supprimer ce compte administrateur ?')) return;
     try {
       await req(`/api/super-admin/users/${id}`, { method: 'DELETE' });
-      await load();
+      await loadMeta();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function downloadAnnualExport() {
+    try {
+      const response = await fetch(`${apiBase}/api/super-admin/feedbacks-export?year=${archiveYear}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || 'Impossible de créer l’export.');
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `avis-innov-care-${archiveYear}.csv`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      setError('');
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function archiveAnnualFeedbacks() {
+    if (!window.confirm(`Avez-vous déjà téléchargé l’export ${archiveYear} ? Les avis seront conservés mais masqués de la vue courante.`)) return;
+    try {
+      const result = await req('/api/super-admin/feedbacks-archive', {
+        method: 'POST', body: JSON.stringify({ year: archiveYear }),
+      });
+      setError('');
+      await Promise.all([loadFeedbacks(token, 1, searchTerm, archiveView), loadMeta()]);
+      window.alert(`${result.archived} avis archivés.`);
     } catch (err) {
       setError(err.message);
     }
@@ -984,10 +1091,33 @@ function SuperAdminView() {
           <h1 className="admin-title">Gestion Super Admin</h1>
           <p className="admin-subtitle">Vous pouvez supprimer des avis et créer des comptes d'accès</p>
         </div>
-        <div className="badge-count-total">{feedbacks.length} avis au total</div>
+        <div className="badge-count-total">{overview.total} avis actifs</div>
       </div>
 
       {error && <div className="error-alert">{error}</div>}
+
+      {overview.storage?.warning && (
+        <div className="storage-alert" role="alert">
+          <strong>Stockage de la base à {overview.storage.percent}%</strong>
+          <span>Exportez et archivez les anciennes années avant d’atteindre la limite.</span>
+        </div>
+      )}
+
+      <section className="card annual-tools">
+        <div>
+          <h3>Conservation annuelle</h3>
+          <p>Téléchargez d’abord le fichier CSV, puis archivez l’année pour alléger les vues quotidiennes.</p>
+        </div>
+        <div className="annual-tools-actions">
+          <label>Année
+            <input className="form-input" type="number" min="2020" max={new Date().getFullYear()}
+              value={archiveYear} onChange={(e) => setArchiveYear(Number(e.target.value))} />
+          </label>
+          <button type="button" className="btn-secondary" onClick={downloadAnnualExport}>Télécharger le CSV</button>
+          <button type="button" className="btn-archive" onClick={archiveAnnualFeedbacks}>Archiver l’année</button>
+        </div>
+        <small>{overview.archived || 0} avis archivés · Stockage estimé : {overview.storage?.percent ?? 0}% de 8 Go</small>
+      </section>
 
       <div className="card" style={{ marginBottom: 30 }}>
         <h3 style={{ color: 'var(--primary-teal)', marginBottom: 12 }}>Créer un compte d'accès responsable</h3>
@@ -1014,10 +1144,30 @@ function SuperAdminView() {
       </div>
 
       <h2 style={{ fontSize: 20, color: 'var(--primary-teal)', marginBottom: 16 }}>
-        Tous les avis reçus ({feedbacks.length})
+        Avis reçus ({pagination.total})
       </h2>
+      <div className="admin-filter-row">
+        <input type="search" className="form-input search-input"
+          placeholder="Rechercher dans les avis..." value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setPagination((current) => ({ ...current, page: 1 }));
+          }} />
+        <select className="form-input" value={archiveView} onChange={(e) => {
+          setArchiveView(e.target.value);
+          setPagination((current) => ({ ...current, page: 1 }));
+        }}>
+          <option value="active">Avis actifs</option>
+          <option value="only">Avis archivés</option>
+          <option value="all">Tous les avis</option>
+        </select>
+      </div>
       <div className="feedbacks-list">
-        {feedbacks.map((item) => (
+        {loadingFeedbacks ? (
+          <div className="card empty-card">Chargement des avis...</div>
+        ) : feedbacks.length === 0 ? (
+          <div className="card empty-card">Aucun avis ne correspond à cette sélection.</div>
+        ) : feedbacks.map((item) => (
           <article key={item.id} className="card modern-message-banner">
             <div className="banner-top-bar">
               <div className="banner-service-tags">
@@ -1050,6 +1200,10 @@ function SuperAdminView() {
           </article>
         ))}
       </div>
+      <Pagination pagination={pagination} onPageChange={(page) => {
+        setPagination((current) => ({ ...current, page }));
+        window.scrollTo({ top: document.body.scrollHeight / 2, behavior: 'smooth' });
+      }} />
     </main>
   );
 }

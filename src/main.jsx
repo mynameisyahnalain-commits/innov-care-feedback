@@ -23,7 +23,7 @@ const ALL_SERVICES = [
   { id: 'maternite',     label: 'Maternité / Gynécologie' },
   { id: 'pediatrie',     label: 'Pédiatrie' },
   { id: 'hospit',        label: 'Hospitalisation' },
-  { id: 'caisse',        label: 'Caisse & Facturation' },
+  { id: 'caisse',        label: 'Caisse' },
   { id: 'autre',         label: 'Autre service' },
 ];
 

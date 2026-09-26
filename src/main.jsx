@@ -6,6 +6,13 @@ import { feedbackServices } from './feedback-summary.mjs';
 
 const LOGO_SRC = '/logo.png';
 const apiBase = import.meta.env.VITE_API_BASE_URL || '';
+const configuredPublicUrl = import.meta.env.VITE_PUBLIC_URL?.trim();
+
+function getInitialQrUrl() {
+  if (configuredPublicUrl) return configuredPublicUrl;
+  if (typeof window !== 'undefined') return window.location.origin;
+  return 'https://innovcare.onrender.com';
+}
 
 const encodeCredentials = (username, password) =>
   btoa(JSON.stringify({ username, password }))
@@ -622,9 +629,10 @@ function AdminView() {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showQrModal, setShowQrModal] = useState(false);
-  const [qrUrlInput, setQrUrlInput] = useState('http://192.168.1.7:5173');
+  const [qrUrlInput, setQrUrlInput] = useState(getInitialQrUrl);
 
   useEffect(() => {
+    if (configuredPublicUrl || !['localhost', '127.0.0.1'].includes(window.location.hostname)) return;
     fetch(`${apiBase}/api/network-ip`)
       .then((r) => r.json())
       .then((data) => { if (data.url) setQrUrlInput(data.url); })
